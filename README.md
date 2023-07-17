@@ -17,3 +17,4 @@ Procedure to solve K3:
 
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
+* [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
