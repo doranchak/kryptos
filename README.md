@@ -20,6 +20,7 @@ Procedure to solve K3:
 * [Sanborn's page](https://jimsanborn.net)
   * [Kryptos info](https://jimsanborn.net/main.html#kryptos)
   * [Kryptos fees](http://jimsanborn.net/kryptos_fees.html)
+* [NSA's declassified Kryptos info (Wayback)](https://web.archive.org/web/20160325132415/https://www.nsa.gov/public_info/declass/cia_kryptos_sculpture.shtml)
 * [Kryptos Fan blog](https://kryptosfan.wordpress.com/)
   * [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
 * Kryptos posts on Numberworld:
