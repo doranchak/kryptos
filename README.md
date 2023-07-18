@@ -25,6 +25,7 @@ Procedure to solve K3:
   * [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html)
   * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
 * [Original decoding charts (NYT)](https://www.nytimes.com/2010/11/21/us/21codecharts.html)
+* [Kryptools.com](http://kryptools.com/): Info, tools, and extensive timeline of hints/clues
 * Videos:
   * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
   
