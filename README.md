@@ -24,4 +24,6 @@ Procedure to solve K3:
   * [Part 3](https://numberworld.blogspot.com/2018/07/kryptos-cipher-part-3.html)
   * [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html)
   * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
+* Videos:
+  * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
   
