@@ -18,3 +18,10 @@ Procedure to solve K3:
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
 * [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
+* Kryptos posts on Numberworld:
+  * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html)
+  * [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html)
+  * [Part 3](https://numberworld.blogspot.com/2018/07/kryptos-cipher-part-3.html)
+  * [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html)
+  * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
+  
