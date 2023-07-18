@@ -17,7 +17,8 @@ Procedure to solve K3:
 
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
-* [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
+* [Kryptos Fan blog](https://kryptosfan.wordpress.com/)
+  * [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
 * Kryptos posts on Numberworld:
   * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html)
   * [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html)
@@ -26,6 +27,7 @@ Procedure to solve K3:
   * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
 * [Original decoding charts (NYT)](https://www.nytimes.com/2010/11/21/us/21codecharts.html)
 * [Kryptools.com](http://kryptools.com/): Info, tools, and extensive timeline of hints/clues
+  * [Sanborn's decoding sheets](http://kryptools.com/Sheets/sheets.htm)
 * Videos:
   * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
   
