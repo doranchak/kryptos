@@ -17,7 +17,13 @@ Procedure to solve K3:
 
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
-* [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
+* [Sanborn's page](https://jimsanborn.net)
+  * [Kryptos info](https://jimsanborn.net/main.html#kryptos)
+  * [Kryptos fees](http://jimsanborn.net/kryptos_fees.html)
+* [NSA's declassified Kryptos info (Wayback)](https://web.archive.org/web/20160325132415/https://www.nsa.gov/public_info/declass/cia_kryptos_sculpture.shtml)
+* [Elonka Dunin's Kryptos page](https://www.elonka.com/kryptos/)
+* [Kryptos Fan blog](https://kryptosfan.wordpress.com/)
+  * [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
 * Kryptos posts on Numberworld:
   * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html)
   * [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html)
@@ -25,6 +31,10 @@ Procedure to solve K3:
   * [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html)
   * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
 * [Original decoding charts (NYT)](https://www.nytimes.com/2010/11/21/us/21codecharts.html)
+* [Kryptools.com](http://kryptools.com/): Info, tools, and extensive timeline of [hints/clues](http://kryptools.com/hints.htm)
+  * [Sanborn's decoding sheets](http://kryptools.com/Sheets/sheets.htm)
 * Videos:
   * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
+  * [Jim Sanborn - Big Tech presentation](https://media.techcast.cloud/bigtechday6/maximilian-1615/?q=maximilian-1615)
+  * [Kryptos segment from Nova ScienceNow](https://www.youtube.com/watch?v=YiYkfwVZuVY)
   
