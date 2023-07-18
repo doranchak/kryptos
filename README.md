@@ -30,4 +30,5 @@ Procedure to solve K3:
   * [Sanborn's decoding sheets](http://kryptools.com/Sheets/sheets.htm)
 * Videos:
   * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
+  * [Jim Sanborn - Big Tech presentation](https://media.techcast.cloud/bigtechday6/maximilian-1615/?q=maximilian-1615)
   
