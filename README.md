@@ -19,6 +19,7 @@ Procedure to solve K3:
 
 Results of running various cipher type identifiers on K1-K4:
 * https://docs.google.com/spreadsheets/d/1G2VXt4d_Fx2UH9Sc918rMHaHvJWIvjcCdu_xQyuzRCs/edit?usp=sharing
+
 Identifiers:
 * [Bion's ACA stats](http://bionsgadgets.appspot.com/gadget_forms/refscore.html)
 * [Bion's Neural Net](https://bionsbeta.appspot.com/test_area/neural_net_id_test_collection18.html)
