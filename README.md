@@ -15,6 +15,19 @@ Procedure to solve K3:
 * In main AZDecrypt window, click "Solve" button again.
 * Solver runs and solution should appear shortly.
 
+# cipher type identification
+
+Results of running various cipher type identifiers on K1-K4:
+* https://docs.google.com/spreadsheets/d/1G2VXt4d_Fx2UH9Sc918rMHaHvJWIvjcCdu_xQyuzRCs/edit?usp=sharing
+Identifiers:
+* [Bion's ACA stats](http://bionsgadgets.appspot.com/gadget_forms/refscore.html)
+* [Bion's Neural Net](https://bionsbeta.appspot.com/test_area/neural_net_id_test_collection18.html)
+* [Boxentriq](https://www.boxentriq.com/code-breaking/cipher-identifier)
+* [CryptoCrack](https://sites.google.com/site/cryptocrackprogram)
+* [Enigmator](https://merri.cx/enigmator/cryptanalysis/crypto_identifier.html)
+* [dCode.fr](https://www.dcode.fr/cipher-identifier)
+* [NCID](https://www.cryptool.org/en/cto/ncid)
+
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
 * [Sanborn's page](https://jimsanborn.net)
