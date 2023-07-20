@@ -39,11 +39,7 @@ Identifiers:
 * [Kryptos Fan blog](https://kryptosfan.wordpress.com/)
   * [Jim Gillogly Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
 * Kryptos posts on Numberworld:
-  * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html)
-  * [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html)
-  * [Part 3](https://numberworld.blogspot.com/2018/07/kryptos-cipher-part-3.html)
-  * [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html)
-  * [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
+  * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html), [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html), [Part 3](https://numberworld.blogspot.com/2018/07/kryptos-cipher-part-3.html), [Part 4](https://numberworld.blogspot.com/2020/07/kryptos-cipher-part-4.html), [Part 5](https://numberworld.blogspot.com/2022/10/kryptos-cipher-part-5.html)
 * [Original decoding charts (NYT)](https://www.nytimes.com/2010/11/21/us/21codecharts.html)
 * [Kryptools.com](http://kryptools.com/): Info, tools, and extensive timeline of [hints/clues](http://kryptools.com/hints.htm)
   * [Sanborn's decoding sheets](http://kryptools.com/Sheets/sheets.htm)
