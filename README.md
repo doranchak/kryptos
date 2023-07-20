@@ -37,7 +37,7 @@ Identifiers:
 * [NSA's declassified Kryptos info (Wayback)](https://web.archive.org/web/20160325132415/https://www.nsa.gov/public_info/declass/cia_kryptos_sculpture.shtml)
 * [Elonka Dunin's Kryptos page](https://www.elonka.com/kryptos/)
 * [Kryptos Fan blog](https://kryptosfan.wordpress.com/)
-  * [Jim Gillogy Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
+  * [Jim Gillogly Q&A](https://kryptosfan.wordpress.com/kryptos-foia/kryptos-fan-letter-to-solvers/jim-gilloglys-response/)
 * Kryptos posts on Numberworld:
   * [Part 1](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-1.html)
   * [Part 2](https://numberworld.blogspot.com/2017/03/kryptos-cipher-part-2.html)
@@ -52,4 +52,7 @@ Identifiers:
   * [Jim Sanborn - Big Tech presentation](https://media.techcast.cloud/bigtechday6/maximilian-1615/?q=maximilian-1615)
   * [Kryptos segment from Nova ScienceNow](https://www.youtube.com/watch?v=YiYkfwVZuVY)
 * [Wired interview with Ed Scheidt](https://www.wired.com/2005/01/inside-info-on-kryptos-codes)
+* [Usenet: Gillogly announces his solves (1999)](https://groups.google.com/g/sci.crypt/c/r0PO91Pnc-E)
+* [Usenet: Gillogly explains "Shotgun hillclimbing", the technique he used](https://groups.google.com/g/sci.crypt/c/7rZFtnVHnCY/m/u_aL2sNOuJIJ)
+* [Usenet: Gillogly gives some info on his solver algorithm](https://groups.google.com/g/sci.crypt/c/hOCNN6L13CM/m/s85aEvsmrl0J)
   
