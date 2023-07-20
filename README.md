@@ -51,4 +51,5 @@ Identifiers:
   * [K1 solution tutorial](https://www.youtube.com/watch?v=ks_ZH5ttQzU)
   * [Jim Sanborn - Big Tech presentation](https://media.techcast.cloud/bigtechday6/maximilian-1615/?q=maximilian-1615)
   * [Kryptos segment from Nova ScienceNow](https://www.youtube.com/watch?v=YiYkfwVZuVY)
+* [Wired interview with Ed Scheidt](https://www.wired.com/2005/01/inside-info-on-kryptos-codes)
   
