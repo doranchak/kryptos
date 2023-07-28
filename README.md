@@ -32,6 +32,7 @@ Identifiers:
 # papers
 
 * [Richard Bean - Cryptodiagnosis of "Kryptos K4"](https://ecp.ep.liu.se/index.php/histocrypt/article/view/153)
+* [Craig Bauer - James Sanborn’s Kryptos and the matrix encryption conjecture](https://www.tandfonline.com/doi/abs/10.1080/01611194.2016.1141556)
 
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
