@@ -29,6 +29,10 @@ Identifiers:
 * [dCode.fr](https://www.dcode.fr/cipher-identifier)
 * [NCID](https://www.cryptool.org/en/cto/ncid)
 
+# papers
+
+* [Richard Bean - Cryptodiagnosis of "Kryptos K4"](https://ecp.ep.liu.se/index.php/histocrypt/article/view/153)
+
 # more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
 * [Sanborn's page](https://jimsanborn.net)
