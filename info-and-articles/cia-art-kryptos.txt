@@ -1,0 +1,664 @@
+16 June 1999 - http://jya.com/cia-art-jg.htm
+
+
+
+http://www.nytimes.com/library/tech/99/06/biztech/articles/16code.html
+
+June 16, 1999
+
+
+C.I.A.'s Artistic Enigma Yields All but Final Clue 
+
+By JOHN MARKOFF
+
+It has stood in a courtyard inside the Central Intelligence Agency for
+almost a decade, a sculptural mystery inside an enigma. 
+
+But last week Jim Gillogly, a Southern California computer scientist, did
+what has until now been done -- quietly, and incompletely -- only inside the
+agency's halls. 
+
+He succeeded in breaking almost all of a cipher embedded in a sculpture
+called Kryptos -- the Greek word for "hidden" -- that was dedicated at the
+C.I.A. in October 1990. 
+
+Since then, the 865-character message etched into the sculpture by the
+artist, Jim Sanborn, has defied all efforts to unravel its conundrum
+completely. Even Gillogly acknowledges that he has deciphered only its first
+768 characters. Still unbroken are the last 97 characters, apparently the
+same section that has also stumped both the C.I.A. and the National Security
+Agency. 
+
+Sanborn said this week that the sculpture contains a riddle within a riddle
+-- one that will be solvable only after the four encrypted passages are
+known. The complete answer was handed to William H. Webster, the Director of
+Central Intelligence when the sculpture was completed, and has been held in
+confidence by his successors. 
+
+The tantalizing clues uncovered last week are likely to rekindle interest in
+a complete solution: The three sections include a poetic phrase, a reference
+to a point near the C.I.A.'s headquarters in Langley, Va. (with the enticing
+passage, "Who knows the exact location? Only WW"), and an excerpt from an
+account of the opening of King Tut's tomb in 1922. 
+
+"I don't really have a good idea of what it might be," said Gillogly, a
+53-year-old cryptographer at Mentat Inc., a Los Angeles software maker, who
+started designing cryptograms with his brother as a child in an effort to
+stump their father. 
+
+A computer hacker in the best sense of the word and a past president of the
+American Cryptogram Association, Gillogly (pronounced gill-OH-glee) began
+exploring the Kryptos message in 1992, but he abandoned it until nine days
+ago, when he saw it briefly alluded to in an Internet discussion group. 
+
+This time he was armed with a better weapon than the pencil and paper he had
+seven years ago: his home computer, a highly powered Pentium II. And the key
+to solving the first three sections of the message proved to be a program
+that Gillogly had written as part of his cryptographic passion. 
+
+The program, he said, is intended to help solve what he refers to as
+classical cryptographic systems used by kings, armies and spies before World
+War II. 
+
+Even with more computational power, he had to apply traditional
+cryptographic methods, using his logical powers of deduction. 
+
+"There was a fair amount of skull sweat," he said. "You work on it and you
+see something that is a little out of whack and you start pulling on it to
+see what unravels." 
+
+When he contacted the C.I.A's press office last week, Gillogly learned that
+he was not the first codebreaker to succeed at unraveling the first part of
+
+the mystery. 
+
+
+In February, David Stein, who works for the agency as a physicist and senior
+analyst, and not as a professional cryptographer, had quietly uncovered the
+same three passages. Like Gillogly, he has been stumped by the final
+section, although he believes that it will eventually be solved. 
+
+"The Kryptos puzzle is a layered puzzle," he said yesterday, "and we may
+find that it has layers within layers within layers." 
+
+Stein sounded a bit miffed when he learned that Gillogly had used a computer
+in his pursuit of the hidden codes. 
+
+"Kryptos was meant to be solved with pencil and paper," he said. 
+
+
+
+--------------------------------------------------------------------------------
+Related Article
+The Kryptos Code Unmasked 
+(June 16, 1999)
+--------------------------------------------------------------------------------
+  
+There were no written rules in this contest, Gillogly responded, adding:
+"As far as I'm concerned a crack is where you find it. The choice of tool
+isn't the important part, but rather the decisions about how to use the
+tools." 
+
+For his part, Webster, the former Director, said yesterday that he had long
+since forgotten the answer. "I have zero memory of this," he said. "It was
+philosophical and obscure." 
+
+But he sided with Gillogly on using a computer. "Who set the rules here?" he
+asked. "This is precisely what the agencies do when they try to break codes." 
+
+Sanborn, the artist, who has designed a number of sculptures that are
+puzzles, has said he believes that the ultimate secret hidden in the text of
+Kryptos will never be deciphered. It was designed by Edward M. Scheidt, a
+former chairman of the C.I.A.'s Cryptographic Center. 
+
+That has not stopped either Gillogly or Stein from speculating on what the
+full message may contain. And Gillogly has even contemplated exploring the
+bag of tricks of some of the world's acknowledged past spy masters in search
+of the complete solution. 
+
+"There're still those last few lines waiting to be decrypted," he wrote last
+week in an Internet discussion group. 
+
+"I'll review the 'Mission Impossible' movie for tips on getting into the
+vault, if all else fails." 
+
+
+
+
+Date: Wed, 16 Jun 1999 07:44:17 -0700
+From: Jim Gillogly <jim@acm.org>
+To: cypherpunks@cyberpass.net
+Subject: Re: Gillogly Cracks CIA Art
+
+
+John Young wrote:
+> So, Jim, what was the message?
+
+It's in the sidebar to the article.  I must say this was the best
+experience I've had working with a journalist -- he got everything
+spot-on.  Only the last Q was left off of one of the plaintexts.
+
+I worked from an impressively clean transcription by Doug Gwyn,
+which you can find at
+
+http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/
+
+Here's what I broke (typos are cut into the copper):
+
+  1. Between subtle shading and the absence
+     of light lies the nuance of iqlusion.
+     Keys: KRYPTOS, PALIMPSEST.
+
+  2. It was totally invisible.  How's that possible?
+     They used the earth's magnetic field. x The information
+     was gathered and transmitted undergruund to an unknown
+     location. x  Does langley know about this?  They should:
+     it's buried out there somewhere. x  Who knows the exact
+     location?  Only WW.  This was his last message. x  Thirty
+     eight degrees fifty seven minutes six point five seconds
+     north, seventy seven degrees eight minutes forty four
+     seconds west.  ID by rows.
+     Keys: KRYPTOS, ABSCISSA
+
+  3. Slowly, desparatly slowly, the remains of passage debris
+     that encumbered the lower part of the doorway was removed.
+     With trembling hands I made a tiny breach in the upper
+     left-hand corner.  And then, widening the hole a little, I
+     inserted the candle and peered in.  The hot air escaping
+     from the chamber caused the flame to flicker, but presently
+     details of the room within emerged from the mist. x  Can
+     you see anything? q
+     Keys: three columnar transpositions.
+
+Here are the last 97 characters, which I haven't broken:
+                           OBKR
+UOXOGHULBSOLIFBBWFLRVQQPRNGKSSO
+TWTQSJQSSEKZZWATJKLUDIAWINFBNYP
+VTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR
+
+I suspect it's running key, or combined polyalphabetic sub
+and transposition, or perhaps autokey.  The only likely
+periodicity appears to be at period 25, but that may well
+just be chance.
+
+The lat-long in the second section are near Langley and McLean,
+Virginia.  Perhaps some cypherpunks with GPS receivers could
+narrow it down a bit.  ABC News thinks it's right at the spot
+where the sculpture sits, but I'd find that surprising given
+the text.  The third section is adapted from Howard Carter's
+first-person account of opening Tutankhamun's tomb, and the
+response to the question was "Yes, wonderful things."  Perhaps
+that's a crib for the last section.
+
+-- 
+        Jim Gillogly
+        26 Forelithe S.R. 1999, 14:29
+        12.19.6.5.1, 5 Imix 9 Zotz, Second Lord of Night
+
+
+---------------------------------------------------------------------------
+http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/
+---------------------------------------------------------------------------
+
+<http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/CIA_clue.txt>
+
+EMUFP HZLRF AXYUS DJKZL DKRNS  HGNFI VJYQT QUXQB QVYUV LLTRE
+VJYQT MKYRD MFDVF PJUDE EHZWE  TZYVG WHKKQ ETGFQ JNCEG GWDKK
+TDQMC PFQZD QMMIA GPFXH ORGLT  IMVMZ JANQL VKQED AGDVF RPJUN
+GEUNA OZGZL ECGYU XUEEN JTBJL  BQCRT BJDFH RRYIZ ETKZE MVDUF
+KSJHK FWHKU WQLSZ FTIHH DDDUV    
+
+DWKBF UFPWN TOFIY CUQZE REEVL  DKFEZ MOQQJ LTTUG SYQPF EUNLA
+VIDXF LGGTE Z
+
+FKZBS FDQVG OGIPU FXHHD RKFFH  QNTGP UAECN UVPDJ MQCLQ UMUNE
+DFQEL ZZVRR GKFFV OEEXB DMVPN  FQXEZ LGRED NQFMP NZGLF LPMRJ
+QYALM GNUVP DXVKP DQUME BEEDM  DAFMJ GZNUP LGEWJ LLAET GENDY
+AHROH NLSRH EOCPT EOIBI DYSHN  AIACH TNREY ULDSL LSLLN OHSNO
+SMRWX MNETP RNGAT IHNRA RPESL  NNELE BLPII ACAEW MTWND ITEEN
+RAHCT ENEUD RETNH AEOEI FOLSE  DTIWE NHAET OYTEY QHEEN CTAYC
+REIFT BRSPA MHHEW ENATA MATEG  YEERL BIEEF OASFI OTUET UAEOT
+OARMA EERTN RTIBS EDDNI AAHTT  MSTEW PIERO AGRIE WFEBA ECTDD
+HILOE IHSIT EGOEA OSDDR YDLCR  ITRKL MLEHA GTDHA RDPNE OHMGF
+WFEUH EECDM RIPFE IMEHN LSSTT  RTVDO HW
+
+OBKRU OXOGH ULBSO LIFBB WFLRV  QQPRN GKSSO IWTQS JQSSE KZZWA
+TJKLU DXYWI NFBNY PVTTM ZFPEW  GDKZX TJCDI GXXXU AUEKC AR
+
+---------------------------------------------------------------------------
+
+<http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/Kryptos.txt>
+
+This file is viewed best in a font, like courier,
+in which all characters are the same width. 
+
+I don't remember who wrote the memo in Kryptos.txt, 
+so I can't express my appreciation adequately. 
+
+There are three files in this set:
+
+     Kryptos.txt  - this file, with the CIA note.
+     CIA_clue.txt - Kryptos text with CIA separations
+     Kryptos.bmp  - a photograph of the Sanborn 
+                    sculpture at CIA Headquarters
+
+The photograph is of a transparent sculpture, with
+the text on one side and the Vigenere table on the
+other.
+
+Perhaps some member of the KREWE can solve the
+KRYPTOS inscription and share it (and the method
+of solution) with the rest of us.
+
+----------------
+
+Anonymous memo:
+
+     Recently, out of a sudden curiosity an ACA-er
+called CIA Public Affairs and asked if there were
+any insights on the Sanborn sculpture at 
+Langley they'd care to disclose to an
+inquiring citizen.  The woman who answered
+the phone said, "No, I can't say anything but,
+if you send me your name and address we can send
+you something."  The ACA-er felt a tad paranoic but gave
+her the info and waited for the guys in the rubber-
+soled shoes.  Instead, two days later two
+pages arrived in the mail which said a bit about the 
+sculpture and gave the complete (and presumably)
+accurate cipher(s).
+     There were no warnings regarding further
+dissemination.  Since there does not seem to be ANY ACA
+reference giving the entire cipher, this
+might be information worth passing along. It seems there 
+are no problems with ACA foreign 
+members seeing this info as it was sent via
+US postal in an unclassified form.
+    Below is the item (typed entirely).
+************************************************************
+Dec 1996
+from: (through US postal channels)
+     CIA
+     Public Affairs
+     Washington, DC 20505
+
+     phone number (703)-482-1100
+ they won't discuss it over the phone!
+ just ask for "available information on KRYPTOS sculpture"
+
+--------------------------------------------------------------
+                SANBORN SCULPTURE
+
+             The Art of Cryptography
+
+     KRYPTOS, that peculiar sculpture in the court-
+yard area of the headquarters complex, has raised
+many eyebrows and questions ever since its installa-
+tion.  Undoubtedly its most intriguing aspect is the
+riddle of its hidden message.  What could it be?
+     Though few persons other than the author know
+the answer for certain, many have contemplated the
+question.  We would like to pass on what knowledge
+we have gained from our cryptanalysis regarding the
+message.                                           
+     It is probable, from analysis of the letter distribu-
+tion, that at least four separate systems of encryption
+have been employed: Digraphic, Poly-alphabetic,
+Transposition, and One-Time-Pad.
+     The first of these, Digraphic substitution, is
+guessed to be applicable from "EMUFPH..." to "...
+GWHKK?".  Thus method substitutes two letters for
+one letter, or even a whole syllable or word (e.g.,
+JK=g, or FE=ible).
+     The Polyalphabetic system appears to be used
+with the text extending from approximately  "DQM-
+CPF..." up to "...JLLAETG".  In this system, mul-
+tiple alphabets (we suspect four or eight) are used to
+substitute different letters for the same letters in the
+origina l text.  For example, an "F" may be translated
+into an "R" one time, and then as an "M" another time, and
+as a "D" a third time.
+     "ENDYAHR..." through "TVDOHW?" is
+guessed to incorporate a transposition system, also
+known as a permutation.  This is a system in which
+the letters in the original message are mixed up
+according to a predefined rule.  Often, the message is
+arranged into a matrix, say, reading left to right; then,
+the message is output reading down the colunms. (See
+example next page.)  Perhaps a matrix system in
+which the length of the columns are multiples of
+eleven or thirteen has been used for this section of the
+message.
+
+           |-------------------------------------|
+           |       The KRYPTOS Inscription       |
+           |                                     |
+           |  EMUFPHZLRFAXYUSDJKZLDKRNSHGNFIVJ   |
+           |  YQTQUXQBQVYUVLLTREVJYQTMKYRDMFD    |
+           |  VFPJUDEEHZWETZYVGWHKKQETGFQJNCE    |
+           |  GGWHKK?DQMCPFQZDQMMIAGPFXHQRLG     |
+           |  TIMVMZJANQLVKQEDAGDVFRPJUNGEUNA    |
+           |  QZGZLECGYUXUEENJTBJLBQCRTBJDFHRR   |
+           |  YIZETKZEMVDUFKSJHKFWHKUWQLSZFTI    |
+           |  HHDDDUVH?DWKBFUFPWNTDFIYCUQZERE    |
+           |  EVLDKFEZMOQQJLTTUGSYQPFEUNLAVIDX   |
+           |  FLGGTEZ?FKZBSFDQVGOGIPUFXHHDRKF    |
+           |  FHQNTGPUAECNUVPDJMQCLQUMUNEDFQ     |
+           |  ELZZVRRGKFFVOEEXBDMVPNFQXEZLGRE    |
+           |  DNQFMPNZGLFLPMRJQYALMGNUVPDXVKP    |
+           |  DQUMEBEDMHDAFMJGZNUPLGEWJLLAETG    |
+           |  ENDYAHROHNLSRHEOCPTEOIBIDYSHNAIA   |
+           |  CHTNREYULDSLLSLLNOHSNOSMRWXMNE     |
+           |  TPRNGATIHNRARPESLNNELEBLPIIACAE    |
+           |  WMTWNDITEENRAHCTENEUDRETNHAEOE     |
+           |  TFOLSEDTIWENHAEIOYTEYQHEENCTAYCR   |
+           |  EIFTBRSPAMHHEWENATAMATEGYEERLB     |
+           |  TEEFOASFIOTUETUAEOTOARMAEERTNRTI   |
+           |  BSEDDNIAAHTTMSTEWPIEROAGRIEWFEB    |
+           |  AECTDDHILCEIHSITEGOEAOSDDRYDLORIT  |
+           |  RKLMLEHAGTDHARDPNEOHMGFMFEUHE      |
+           |  ECDMRIPFEIMEHNLSSTTRTVDOHW?OBKR    |
+           |  UOXOGHULBSOLIFBBWFLRVQQPRNGKSSO    |
+           |  TWTQSJQSSEKZZWATJKLUDIAWINFBNYP    |
+           |  VTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR    |
+           |-------------------------------------|
+
+|------------------------------------------------------------|
+|            Example of a Columnar Transposition             |
+|                                                            |
+| Original message: "Cryptography is a useful tool for       |
+| information protection"                                    |
+|                                                            |
+| 7x7 Matrix:  C R Y P T O G                                 |
+|              R A P H Y I S                                 |
+|              A U S E F U L                                 |
+|              T O O L F O R                                 |
+|              I N F O R M A                                 |
+|              T I O N P R O                                 |
+|              T E C T I O N                                 |
+|                                                            |
+| Encrypted message: "CRATI TTRAU ONIEY                      |
+|       PSOPO CPHEL ONTTY FFRPI OIUOM                        |
+|       ROGSL RAONX"                                         |
+| (made by reading down the columns, then breaking           |
+| into 5-letter blocks.  The last "X" is an arbitrary filler |
+| so the last group will also have 5 letters.)               |
+|                                                            |
+|------------------------------------------------------------|
+
+     Finally, the part of the message from
+"OBKRUO..." to the end may make use of a one-
+time system.  Essentially, every character in the orig-
+inal message is encrypted using its own unique alpha-
+bet.  This is a very secure cryptographic system,
+because if the alphabets used are selected at random,
+there is no pattern to follow for anyone trying to
+break the code.
+     The other half of the sculpture may provide a clue
+as to which alphabets are used, however.  It is an
+arrangement of the alphabet, known as a Vigenere
+Square, in which each successive row is shifted one
+place to the left (In this case, some of the letters are
+shifted in position to spell the word KRYPTOS), with
+reference alphabets along the top, bottom, and side.
+Though used in many ways, this table is very often
+used for one-time-pad encryption.  For example, if
+someone wanted to encrypt the letter "G", and the key
+they were using was the letter "F", he would just look
+down column "G" to row "F" and would see that "G"
+becomes an,'E'.  Since there are 26 rows and column
+on the Vigenere square, any letter can be encrypted as
+any other letter depending on the key used.
+     There is speculation that the other elements of
+Jim Sanborn's sculpture may hold clues to the cipher
+used in the message in the courtyard, but there is yet
+no proof.  You may have noted the dots and dashes on
+the metal sheets between the granite slabs in front of
+the NHB (New Headquarters Building?) entrance; this is
+Morse Code, and there are five phrases: "DIGE TAL
+INTERPRETATU", "T IS YOUR POSITION", "VIRTUALLY
+INVISIBLE", "SHADOW FORCES", and "LUCID MEMORY".
+Also to be found are the letter combinations "SOS"
+and "RQ".
+
+     In the case of the sculpture, cryptography is
+mainly an intriguing oddity; but cryptography has a very
+real role in the world of intelligence.  (Information
+and sources need to be protected, and cryptography
+can afford that protection.)
+
+
+     If you decide to tackle the cipher, good luck!  We
+will attempt to keep you posted on any relevant
+developments as they arise.
+
+          |---------------------------------|
+          |   The KRYPTOS Vigenere Table    |
+          |                                 |
+          | /ABCDEFGHIJKLMNOPQRSTUVWXYZABCD |
+          | AKRYPTOSABCDEFGHIJLMNQUVWXZKRYP |
+          | BRYPTOSABCDEFGHIJLMNQUVWXZKRYPT |
+          | CYPTOSABCDEFGHIJLMNQUVWXZKRYPTO |
+          | DPTOSABCDEFGHIJLMNQUVWXZKRYPTOS |
+          | ETOSABCDEFGHIJLMNQUVWXZKRYPTOSA |
+          | FOSABCDEFGHIJLMNQUVWXZKRYPTOSAB |
+          | GSABCDEFGHIJLMNQUVWXZKRYPTOSABC |
+          | HABCDEFGHIJLMNQUVWXZKRYPTOSABCD |
+          | IBCDEFGHIJLMNQUVWXZKRYPTOSABCDE |
+          | JCDEFGHIJLMNQUVWXZKRYPTOSABCDEF |
+          | KDEFGHIJLMNQUVWXZKRYPTOSABCDEFG |
+          | LEFGHIJLMNQUVWXZKRYPTOSABCDEFGH |
+          | MFGHIJLMNQUVWXZKRYPTOSABCDEFGHI |
+          | NGHIJLMNQUVWXZKRYPTOSABCDEFGHIJ |
+          | OHIJLMNQUVWXZKRYPTOSABCDEFGHIJL |
+          | PIJLMNQUVWXZKRYPTOSABCDEFGHIJLM |
+          | QJLMNQUVWXZKRYPTOSABCDEFGHIJLMN |
+          | RLMNQUVWXZKRYPTOSABCDEFGHIJLMNQ |
+          | SMNQUVWXZKRYPTOSABCDEFGHIJLMNQU |
+          | TNQUVWXZKRYPTOSABCDEFGHIJLMNQUV |
+          | UQUVWXZKRYPTOSABCDEFGHIJLMNQUVW |
+          | VUVWXZKRYPTOSABCDEFGHIJLMNQUVWX |
+          | WVWXZKRYPTOSABCDEFGHIJLMNQUVWXZ |
+          | XWXZKRYPTOSABCDEFGHIJLMNQUVWXZK |
+          | YXZKRYPTOSABCDEFGHIJLMNQUVWXZKR |
+          | ZZKRYPTOSABCDEFGHIJLMNQUVWXZKRY |
+          | /ABCDEFGHIJKLMNOPQRSTUVWXYZABCD |
+          |---------------------------------|
+
+/end of file/
+
+---------------------------------------------------------------------------
+
+<http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/gillogly>
+
+
+From acargi@erols.com Wed Jun 16 12:43:05 1999
+Date: Wed, 16 Jun 1999 12:45:42 -0400
+From: Henry J Siano <acargi@erols.com>
+To: ACA-L@LISTSERV.NODAK.EDU
+Subject: Markoff New York Times Article 6 16 99
+
+          June 16, 1999
+
+
+          C.I.A.'s Artistic Enigma Yields All but
+          Final Clue
+
+          By JOHN MARKOFF
+
+             It has stood in a courtyard inside the Central Intelligence
+Agency for almost a decade, a sculptural mystery inside an enigma.
+
+          But last week Jim Gillogly, a Southern California computer
+scientist, did what has until now been done -- quietly, and incompletely
+-- only inside the agency's halls.
+
+          He succeeded in breaking almost all of a cipher embedded in a
+sculpture called Kryptos -- the Greek word for "hidden" -- that was
+dedicated at the C.I.A. in October 1990.
+
+          Since then, the
+          865-character message
+          etched into the sculpture by
+          the artist, Jim Sanborn, has
+          defied all efforts to unravel its
+          conundrum completely. Even
+          Gillogly acknowledges that
+          he has deciphered only its
+          first 768 characters. Still
+          unbroken are the last 97
+          characters, apparently the
+          same section that has also
+          stumped both the C.I.A. and
+          the National Security
+          Agency.
+
+          Sanborn said this week that the sculpture contains a riddle
+within a riddle -- one that will be solvable only after the four encrypted
+passages are known. The complete answer was handed to William H. Webster,
+the Director of Central Intelligence when the sculpture was
+completed, and has been held in confidence by his successors.
+
+          The tantalizing clues uncovered last week are likely to
+rekindle interest in a complete solution: The three sections include a poetic
+phrase, a reference to a point near the C.I.A.'s headquarters in
+Langley, Va. (with the enticing passage, "Who knows the exact location? Only
+WW"), and an excerpt from an account of the opening of King Tut's tomb
+in 1922.
+
+          "I don't really have a good idea of what it might be," said
+Gillogly, a 53-year-old cryptographer at Mentat Inc., a Los Angeles
+software maker, who started designing cryptograms with his brother as a
+child in an effort to stump their father.
+
+          A computer hacker in the best sense of the word and a past
+president of the American Cryptogram Association, Gillogly (pronounced
+gill-OH-glee) began exploring the Kryptos message in 1992, but
+he abandoned it until nine days ago, when he saw it briefly
+alluded to in an Internet discussion group.
+
+          This time he was armed with a better weapon than the pencil
+and paper he had seven years ago: his home computer, a highly powered
+Pentium II. And the key to solving the first three sections of the
+message proved to be a program that Gillogly had written as part of his
+cryptographic passion.
+
+          The program, he said, is intended to help solve what he refers
+to as classical cryptographic systems used by kings, armies and
+spies before World War II.
+
+          Even with more computational power, he had to apply
+traditional cryptographic methods, using his logical powers of deduction.
+
+          "There was a fair amount of skull sweat," he said. "You work
+on it and you see something that is a little out of whack and you start
+pulling on it to see what unravels."
+
+          When he contacted the C.I.A's press office last week, Gillogly
+learned that he was not the first codebreaker to succeed at unraveling
+the first part of the mystery.
+
+          In February, David Stein, who works for the agency as a
+physicist and senior analyst, and not as a professional cryptographer, had
+quietly uncovered the same three passages. Like Gillogly, he has been
+stumped by the final section, although he believes that it will
+eventually be solved.
+
+          "The Kryptos puzzle is a layered puzzle," he said yesterday,
+"and we may find that it has layers within layers within layers."
+
+          Stein sounded a bit miffed when he learned that Gillogly had
+used a computer in his pursuit of the hidden codes.
+
+          "Kryptos was meant to be solved with pencil and paper," he
+said.
+
+          There were no written rules in this contest,
+          Gillogly responded, adding: "As far as I'm
+          concerned a crack is where you find it. The
+          choice of tool isn't the important part, but rather
+          the decisions about how to use the tools."
+
+          For his part, Webster, the former Director, said yesterday
+that he had long since forgotten the answer. "I have zero memory of this,"
+he said. "It was philosophical and obscure."
+
+          But he sided with Gillogly on using a computer. "Who set the
+rules here?" he asked. "This is precisely what the agencies do when they
+try to break codes."
+
+          Sanborn, the artist, who has designed a number of sculptures
+that are puzzles, has said he believes that the ultimate secret hidden
+in the text of Kryptos will never be deciphered. It was designed by Edward
+M. Scheidt, a former chairman of the C.I.A.'s Cryptographic
+Center.
+
+          That has not stopped either Gillogly or Stein from speculating
+on what the full message may contain. And Gillogly has even
+contemplated exploring the bag of tricks of some of the world's
+acknowledged past spy masters in search of the complete solution.
+
+          "There're still those last few lines waiting to be decrypted,"
+he wrote last week in an Internet discussion group.
+
+          "I'll review the 'Mission Impossible' movie for tips on
+getting into the vault, if all else fails."
+
+                     Copyright 1999 The New York Times Company
+
+____________________________________________________________________
+
+From dlsmith@annap.infi.net Wed Jun 16 12:45:01 1999
+Date: Wed, 16 Jun 1999 13:10:35 -0400
+From: Dave Smith <dlsmith@annap.infi.net>
+Reply-To: ACA-L <ACA-L@LISTSERV.NODAK.EDU>
+To: ACA-L@LISTSERV.NODAK.EDU
+Subject: Re: Markoff New York Times Article 6 16 99
+
+ARGUSEYE provided the main article in his post. There is also a secondary
+article with the text of the solution. It is provided below:
+
+-----
+June 16, 1999
+
+The Kryptos Code Unmasked
+
+Here are the first three passages of the code on the Kryptos statue as
+deciphered by Jim Gillogly, including misspellings (of "illusion," "underground"
+and "desperately"). The second passage identifies a location near the C.I.A.
+headquarters; the third is taken from Howard Carter's account of the opening of
+King Tut's tomb in 1922.
+
+---------------------------------------------------
+Related Article
+C.I.A.'s Artistic Enigma Yields All but Final Clue
+(June 16, 1999)
+---------------------------------------------------
+
+1. Between subtle shading and the absence of light lies the nuance of iqlusion.
+
+2. It was totally invisible.
+
+How's that possible? They used the earth's magnetic field. x The information was
+gathered and transmitted undergruund to an unknown location. x Does Langley know
+about this? They should: it's buried out there somewhere. x Who knows the exact
+location? Only WW. This was his last message. x Thirty-eight degrees fifty-seven
+minutes six point five seconds north, seventy-seven degrees eight minutes
+forty-four seconds west. ID by rows.
+
+3. Slowly, desparatly slowly, the remains of passage debris that encumbered the
+lower part of the doorway was removed.
+
+With trembling hands I made a tiny breach in the upper left-hand corner. And
+then, widening the hole a little, I inserted the candle and peered in. The hot
+air escaping from the chamber caused the flame to flicker, but presently details
+of the room within emerged from the mist. x Can you see anything?
+-----
+
+---------------------------------------------------------------------------
+
+http://www.und.nodak.edu/org/crypto/crypto/general.crypt.info/Kryptos/Kryptos.bmp
+
+(check in same directory for this)
+
+
