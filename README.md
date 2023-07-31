@@ -53,7 +53,7 @@ Identifiers:
   * [Jim Sanborn - Big Tech presentation](https://media.techcast.cloud/bigtechday6/maximilian-1615/?q=maximilian-1615)
   * [Kryptos segment from Nova ScienceNow](https://www.youtube.com/watch?v=YiYkfwVZuVY)
   * [Nova ScienceNow videos (better quality)](https://drive.google.com/drive/folders/18pgkkNXpOBNkA8Pu4uHa3EttF8qkrQhk?usp=sharing)
-  * [Great Big Story video on Kryptos](https://www.youtube.com/watch?v=CwdUwevayRU)
+  * [Great Big Story video on Kryptos (interviews with Elonka Dunin and Jim Sanborn)](https://www.youtube.com/watch?v=CwdUwevayRU)
 * [Wired interview with Ed Scheidt](https://www.wired.com/2005/01/inside-info-on-kryptos-codes)
 * [Usenet: Gillogly announces his solves (1999)](https://groups.google.com/g/sci.crypt/c/r0PO91Pnc-E)
 * [Usenet: Gillogly explains "Shotgun hillclimbing", the technique he used](https://groups.google.com/g/sci.crypt/c/7rZFtnVHnCY/m/u_aL2sNOuJIJ)
