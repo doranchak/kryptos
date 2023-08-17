@@ -60,4 +60,7 @@ Identifiers:
 * [Usenet: Gillogly announces his solves (1999)](https://groups.google.com/g/sci.crypt/c/r0PO91Pnc-E)
 * [Usenet: Gillogly explains "Shotgun hillclimbing", the technique he used](https://groups.google.com/g/sci.crypt/c/7rZFtnVHnCY/m/u_aL2sNOuJIJ)
 * [Usenet: Gillogly gives some info on his solver algorithm](https://groups.google.com/g/sci.crypt/c/hOCNN6L13CM/m/s85aEvsmrl0J)
+* [1999-07-19 Washington Post article on Kryptos](https://www.washingtonpost.com/wp-srv/national/daily/july99/kryptos19.htm)
+* [2005-06-21 CNN Sanborn interview](http://edition.cnn.com/2005/US/06/17/sanborn/?fbclid=IwAR2y96oG1gl92CS5_Fty0UtlolM7KjqjlmvyJRH9Fdr3tM4_o-ns9hOs5Ek)
+
   
