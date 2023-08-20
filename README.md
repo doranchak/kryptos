@@ -62,5 +62,6 @@ Identifiers:
 * [Usenet: Gillogly gives some info on his solver algorithm](https://groups.google.com/g/sci.crypt/c/hOCNN6L13CM/m/s85aEvsmrl0J)
 * [1999-07-19 Washington Post article on Kryptos](https://www.washingtonpost.com/wp-srv/national/daily/july99/kryptos19.htm)
 * [2005-06-21 CNN Sanborn interview](http://edition.cnn.com/2005/US/06/17/sanborn/?fbclid=IwAR2y96oG1gl92CS5_Fty0UtlolM7KjqjlmvyJRH9Fdr3tM4_o-ns9hOs5Ek)
+* [2020-02-23 How Was K1 of the CIA Sculpture of Kryptos Solved?](https://mysteriouswritings.com/how-was-k1-of-the-cia-sculpture-of-kryptos-solved/)
 
   
