@@ -55,7 +55,9 @@ Identifiers:
   * [Nova ScienceNow videos (better quality)](https://drive.google.com/drive/folders/18pgkkNXpOBNkA8Pu4uHa3EttF8qkrQhk?usp=sharing)
   * [Great Big Story video on Kryptos (interviews with Elonka Dunin and Jim Sanborn)](https://www.youtube.com/watch?v=CwdUwevayRU)
   * [Early Sanborn interview on CNN](https://www.youtube.com/watch?v=mhHFXRQgCPo)
-    *  Fifteen years after this interview, Jim Sanborn recalled that he had "loose lips" and was "very glib."  He claims that he practically gave the whole solution away.  
+    * Fifteen years after this interview, Jim Sanborn recalled that he had "loose lips" and was "very glib."  He claims that he practically gave the whole solution away.
+  * [2015-10-25 Kryptos Workshop](https://www.youtube.com/watch?v=25YFYKKKkDo)
+    * [Transcript](https://scienceblogs.de/klausis-krypto-kolumne/kryptos-workshop-transcript/)
 * [Wired interview with Ed Scheidt](https://www.wired.com/2005/01/inside-info-on-kryptos-codes)
 * [Usenet: Gillogly announces his solves (1999)](https://groups.google.com/g/sci.crypt/c/r0PO91Pnc-E)
 * [Usenet: Gillogly explains "Shotgun hillclimbing", the technique he used](https://groups.google.com/g/sci.crypt/c/7rZFtnVHnCY/m/u_aL2sNOuJIJ)
