@@ -1,0 +1,47 @@
+ ENTER "1" for QUAGMIRE I or "2" for QUAGMIRE II: 2
+      QUAGMIRE II ASSISTANT
+ ENTER FILE NAME ("-1" TO QUIT): E11JF2009.txt
+ Length=113 Tip=NAMINGRANKINGAND  Tip length= 16
+
+ k =  3  meanphi   0.0492
+ k =  4  meanphi   0.0446
+ k =  5  meanphi   0.0465
+ k =  6  meanphi   0.0519
+ k =  7  meanphi   0.0658
+ k =  8  meanphi   0.0475
+ k =  9  meanphi   0.0504
+ k = 10  meanphi   0.0479
+ k = 11  meanphi   0.0470
+ k = 12  meanphi   0.0458
+ k = 13  meanphi   0.0586
+ k = 14  meanphi   0.0683
+ k = 15  meanphi   0.0444
+ k = 16  meanphi   0.0439
+ Bestmean =  0.0683  kbest = 14
+ ENTER THE KEYWORD LENGTH ("-1" to QUIT): 7
+ Tip match at position   57
+ Number of tip matches= 1
+
+ Tip placement at  57
+     1234567    1234567    # Letters in tableau:  19             CIPHER FREQUENCIES
+  1  GXCTHBA    .A.....    pt 0 ABCDEFGHIJKLMNOPQRSTUVWXYZ   ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  2  EIIVWGB    .......    ct 1 O.........D..H.........X..   01003112210000112000100010
+  3  JGEFIWL    ....N.A    ct 2 X..O.........D..H.........   11010020301200100000010300
+  4  EBWEERU    .......    ct 3 ..........G.N.............   00112010200101002000103001
+  5  IXEKWEN    .A.....    ct 4 ........L................M   00001100101401100102120000
+  6  ILQISMN    .......    ct 5 .............I............   00012001400000201020002100
+  7  FVZLDFJ    ...I...    ct 6 ...X..O.........D..H......   02001320000010300100001200
+  8  QLWUXBM    ......R    ct 7 L................M........   12000010010323000100200000
+  9  HXNLIOM    NAMINGR
+ 10  ODGLIOL    ANKINGA
+ 11  HOUTQFB    ND.....
+ 12  BGLLION    ...ING.
+ 13  PAQVOFG    .......
+ 14  QIDOEGR    .......
+ 15  EIINOXU    .....D.
+ 16  UKWRSXL    .....DA
+ 17  Y          .
+ .A................N.A........A...............I.........RNAMINGRANKINGAND........
+ ING....................D......DA.
+
+ ENTER THE ALPHABET NUMBER FOR A GUESS REPLACEMENT ("-1" to QUIT,"0" to UNDO):
