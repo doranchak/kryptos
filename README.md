@@ -68,5 +68,5 @@ Identifiers:
 * [2020-02-23 How Was K1 of the CIA Sculpture of Kryptos Solved?](https://mysteriouswritings.com/how-was-k1-of-the-cia-sculpture-of-kryptos-solved/)
 * [2020-07-31 Richard Bean's summary of conflicting statements from Sanborn / Scheidt](https://scienceblogs.de/klausis-krypto-kolumne/2020/07/28/a-cnn-article-about-kryptos/#comment-1703612)
 * [2022-11-04 "German Guesser", whose solution "started to look right" according to Sanborn - Details about finding high IoC using XOR layers](https://kryptos.hoerenberg.com/index.php?cat=Kryptos%20K4)
-
+* [2025-03-23 Kryptos group thread about Sanborn's response to a redditor's submission](https://kryptos.groups.io/g/main/topic/111870499#msg25360)
   
