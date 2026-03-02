@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Text Rotation Trials</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #4CAF50;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3 { color: #fff; margin-top: 0; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        
+        button:hover { background: #45a049; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        .speed-control { display: flex; align-items: center; gap: 10px; }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 14px;
+            width: max-content;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 6px 8px;
+            text-align: center;
+            min-width: 20px;
+        }
+
+        th { background-color: #2c2c2c; color: #fff; position: sticky; left: 0; z-index: 1;}
+
+        /* Histogram Styles */
+        .histogram-container {
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            height: 250px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            position: relative;
+        }
+
+        .bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+        }
+
+        .bar {
+            width: 100%;
+            background: #2196F3;
+            border-radius: 3px 3px 0 0;
+            transition: height 0.1s ease-out;
+            min-height: 1px;
+            position: relative;
+        }
+
+        .bar:hover { background: #64B5F6; }
+        .bar-count { font-size: 10px; margin-bottom: 2px; color: #aaa; }
+        .bar-label { font-size: 10px; margin-top: 5px; color: #888; }
+
+        /* Stats Styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Random Text Rotation Trials</h1>
+
+    <div class="controls">
+        <button id="btn-toggle" onclick="toggleRunning()">Start Trials</button>
+        <button onclick="resetStats()">Reset Statistics</button>
+        <label>
+            <input type="checkbox" id="auto-run" checked> Auto-run Next Trial
+        </label>
+        <div class="speed-control">
+            <label for="speed">Animation Delay (ms):</label>
+            <input type="range" id="speed" min="0" max="200" value="20" oninput="document.getElementById('speed-val').innerText = this.value">
+            <span id="speed-val">20</span>ms
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h3>Trials Run</h3><div id="stat-count" class="stat-value">0</div></div>
+        <div class="stat-card"><h3>Min Count</h3><div id="stat-min" class="stat-value">-</div></div>
+        <div class="stat-card"><h3>Max Count</h3><div id="stat-max" class="stat-value">-</div></div>
+        <div class="stat-card"><h3>Mean</h3><div id="stat-mean" class="stat-value">-</div></div>
+        <div class="stat-card"><h3>Median</h3><div id="stat-median" class="stat-value">-</div></div>
+        <div class="stat-card"><h3>Std Dev</h3><div id="stat-stddev" class="stat-value">-</div></div>
+    </div>
+
+    <div class="table-container">
+        <table id="data-table">
+            <tr id="row-t1"><th>T1</th></tr>
+            <tr id="row-t2"><th>T2 (Shift 0)</th></tr>
+            <tr id="row-diff"><th>Difference</th></tr>
+        </table>
+    </div>
+
+    <div style="background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <h3 style="margin-bottom: 5px;">Histogram of Differences</h3>
+        <p style="font-size: 14px; color: #aaa; margin-top: 0;">X-axis: Difference | Y-axis: Frequency count for the <em>current</em> rotation.</p>
+        <div class="histogram-container" id="histogram"></div>
+    </div>
+</div>
+
+<script>
+    const N = 97;
+    let isRunning = false;
+    let measurements = []; // Stores the max frequency for each completed trial
+    let T1 = '', T2 = '';
+
+    // Initialize DOM Elements
+    const rowT1 = document.getElementById('row-t1');
+    const rowT2 = document.getElementById('row-t2');
+    const rowDiff = document.getElementById('row-diff');
+    const histContainer = document.getElementById('histogram');
+    
+    // Setup table cells
+    for(let i = 0; i < N; i++) {
+        rowT1.appendChild(document.createElement('td'));
+        rowT2.appendChild(document.createElement('td'));
+        rowDiff.appendChild(document.createElement('td'));
+    }
+
+    // Setup Histogram Bins (-25 to 25)
+    const bars = {};
+    for (let i = -25; i <= 25; i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bar-wrapper';
+        
+        const countLabel = document.createElement('div');
+        countLabel.className = 'bar-count';
+        countLabel.innerText = '0';
+        
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.innerText = i;
+        
+        wrapper.appendChild(countLabel);
+        wrapper.appendChild(bar);
+        wrapper.appendChild(label);
+        histContainer.appendChild(wrapper);
+        
+        bars[i] = { bar: bar, countLabel: countLabel };
+    }
+
+    function generateRandomString(length) {
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
+        }
+        return result;
+    }
+
+    function updateStats() {
+        document.getElementById('stat-count').innerText = measurements.length;
+        if (measurements.length === 0) return;
+
+        let min = Math.min(...measurements);
+        let max = Math.max(...measurements);
+        
+        let sum = measurements.reduce((a, b) => a + b, 0);
+        let mean = sum / measurements.length;
+
+        let sorted = [...measurements].sort((a, b) => a - b);
+        let median = sorted.length % 2 === 0 
+            ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 
+            : sorted[Math.floor(sorted.length / 2)];
+
+        let variance = measurements.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / measurements.length;
+        let stddev = Math.sqrt(variance);
+
+        document.getElementById('stat-min').innerText = min;
+        document.getElementById('stat-max').innerText = max;
+        document.getElementById('stat-mean').innerText = mean.toFixed(2);
+        document.getElementById('stat-median').innerText = median;
+        document.getElementById('stat-stddev').innerText = stddev.toFixed(2);
+    }
+
+    function resetStats() {
+        measurements = [];
+        document.getElementById('stat-count').innerText = 0;
+        document.getElementById('stat-min').innerText = '-';
+        document.getElementById('stat-max').innerText = '-';
+        document.getElementById('stat-mean').innerText = '-';
+        document.getElementById('stat-median').innerText = '-';
+        document.getElementById('stat-stddev').innerText = '-';
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function runTrial() {
+        if (!isRunning) return;
+
+        T1 = generateRandomString(N);
+        T2 = generateRandomString(N);
+        let trialMaxCount = 0;
+
+        // Populate T1 row statically for this trial
+        for(let i = 0; i < N; i++) {
+            rowT1.children[i+1].innerText = T1[i];
+        }
+
+        for (let shift = 0; shift < N; shift++) {
+            if (!isRunning) return;
+            
+            rowT2.children[0].innerText = `T2 (Shift ${shift})`;
+            let currentCounts = {};
+            
+            // Calculate differences for this shift
+            for (let i = 0; i < N; i++) {
+                let char1 = T1[i];
+                let char2 = T2[(i + shift) % N];
+                
+                let diff = char1.charCodeAt(0) - char2.charCodeAt(0);
+                
+                rowT2.children[i+1].innerText = char2;
+                rowDiff.children[i+1].innerText = diff;
+
+                currentCounts[diff] = (currentCounts[diff] || 0) + 1;
+            }
+
+            // Find the most frequent difference in this shift
+            let maxFreqInShift = 0;
+            for (let diff in currentCounts) {
+                if (currentCounts[diff] > maxFreqInShift) {
+                    maxFreqInShift = currentCounts[diff];
+                }
+            }
+            if (maxFreqInShift > trialMaxCount) {
+                trialMaxCount = maxFreqInShift;
+            }
+
+            // Update Histogram for this shift visually
+            // Find max for scaling the Y axis dynamically (min height cap at 15 for aesthetics)
+            let maxBarHeight = Math.max(15, maxFreqInShift); 
+            
+            for (let i = -25; i <= 25; i++) {
+                let c = currentCounts[i] || 0;
+                bars[i].countLabel.innerText = c > 0 ? c : '';
+                bars[i].bar.style.height = `${(c / maxBarHeight) * 100}%`;
+            }
+
+            let delayMs = parseInt(document.getElementById('speed').value);
+            if (delayMs > 0) {
+                await sleep(delayMs);
+            }
+        }
+
+        // Trial completed, record the max measurement
+        if (isRunning) {
+            measurements.push(trialMaxCount);
+            updateStats();
+
+            if (document.getElementById('auto-run').checked) {
+                // Yield to the event loop before starting the next trial to prevent call stack issues
+                setTimeout(runTrial, 0); 
+            } else {
+                toggleRunning(); // Automatically pause if auto-run is unchecked
+            }
+        }
+    }
+
+    function toggleRunning() {
+        isRunning = !isRunning;
+        const btn = document.getElementById('btn-toggle');
+        
+        if (isRunning) {
+            btn.innerText = "Pause Trials";
+            btn.style.background = "#f44336"; // Red color
+            runTrial();
+        } else {
+            btn.innerText = "Start Trials";
+            btn.style.background = "#4CAF50"; // Green color
+        }
+    }
+</script>
+</body>
+</html>
