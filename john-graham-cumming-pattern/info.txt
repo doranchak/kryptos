@@ -1,0 +1,27 @@
+From John Graham-Cumming's post in kryptos.groups.io:
+========================================================================
+
+An anomaly I noticed about 15 years ago and I forgot to write up. Using a standard Vigenère grille (not the KRYPTOS
+keyed one) the following is true: MZFPKW + ERLINB = QQQXXX.
+
+If you're mathematically inclined, you can think of + as addition modulo
+26, using alphabet numbers where A=0, B=1, etc.). If you're not then "+"
+means "use the Vigenère tableau".
+
+pos   ct  val    key  val    sum   mod 26   letter
+ ----------------------------------------------------
+  69    M   12  +   E    4   =  16   =  16   ->  Q
+  70    Z   25  +   R   17   =  42   =  16   ->  Q
+  71    F    5  +   L   11   =  16   =  16   ->  Q
+  72    P   15  +   I    8   =  23   =  23   ->  X
+  73    K   10  +   N   13   =  23   =  23   ->  X
+  74    W   22  +   B    1   =  23   =  23   ->  X
+
+And the jump from Q to X is 7 letters (standard alphabet). And 7 seems
+important. At the time it struck me as really surprising that a apparent
+rotation of BERLIN immediately after where BERLIN appears in the plaintext
+would result in QQQXXX.
+
+However, I've been unable to extend this further.
+
+John.

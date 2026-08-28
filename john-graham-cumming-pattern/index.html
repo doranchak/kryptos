@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K4 Vigenère Anomaly Experiment</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #d8d8d8;
+    --panel: #f6f6f7;
+    --accent: #2b6cb0;
+    --hl-ct: #ffe28a;
+    --hl-pt: #a6e3a1;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1f22;
+      --fg: #e7e7e8;
+      --muted: #9a9a9e;
+      --border: #3a3b3e;
+      --panel: #29292c;
+      --accent: #6ea8fe;
+      --hl-ct: #7a5b00;
+      --hl-pt: #24593a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 24px 32px 60px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; max-width: 900px; line-height: 1.4; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  textarea, input[type=number], select {
+    width: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+  }
+  textarea { resize: vertical; min-height: 54px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+  .row > .field { flex: 1 1 200px; }
+  .row > .field.narrow { flex: 0 0 120px; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .status { font-size: 0.85rem; color: var(--muted); margin-top: 8px; min-height: 1.2em; }
+  .error { color: #c0392b; font-weight: 600; }
+  .seq-display {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    line-height: 1.9;
+    word-break: break-all;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .seq-display .lbl {
+    display: block;
+    font-family: -apple-system, sans-serif;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 2px;
+  }
+  .seq-display span.ch {
+    padding: 1px 0;
+    border-radius: 3px;
+    transition: background 0.08s ease;
+  }
+  .seq-display span.ch.hl-ct { background: var(--hl-ct); color: #1a1a1a; }
+  .seq-display span.ch.hl-pt { background: var(--hl-pt); color: #1a1a1a; }
+  .legend { display: flex; gap: 18px; font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+  .legend .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  thead th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+  }
+  tbody td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+  tbody tr:hover { background: var(--panel); cursor: default; }
+  .table-wrap { max-height: 560px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .pagination { display: flex; align-items: center; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+  .pagination select { width: auto; }
+  .pagination .spacer { flex: 1; }
+  .top-summary { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+  .rank { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>K4 Vigenère Anomaly Experiment</h1>
+<p class="subtitle">
+  Explores John Graham-Cumming's observation on Kryptos K4: using the standard (unkeyed) Vigenère tableau,
+  adding a ciphertext substring to a <em>rotation</em> of a plaintext substring (mod 26, A=0…Z=25) can produce
+  suspiciously repetitive output — e.g. <code>MZFPKW + ERLINB = QQQXXX</code>, where <code>ERLINB</code> is
+  <code>BERLIN</code> rotated left by 1. This tool brute-forces every ciphertext window, every plaintext window,
+  and every rotation, then ranks the results by the Shannon entropy of the derived sequence — low entropy first,
+  since repetitive output is low-entropy output.
+</p>
+
+<div class="panel">
+  <div class="field">
+    <label for="ctInput">Ciphertext</label>
+    <textarea id="ctInput">OBKRUOXOGHULBSOLIFBBWFLRVQQPRNGKSSOTWTQSJQSSEKZZWATJKLUDIAWINFBNYPVTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR</textarea>
+  </div>
+  <div class="field">
+    <label for="ptInput">Plaintext</label>
+    <textarea id="ptInput">BERLIN</textarea>
+  </div>
+  <div class="row">
+    <div class="field narrow">
+      <label for="lInput">Substring length (L)</label>
+      <input type="number" id="lInput" min="1" value="6">
+    </div>
+    <div class="field narrow">
+      <label for="pageSizeInput">Results / page</label>
+      <select id="pageSizeInput">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button id="runBtn">Run experiment</button>
+    <button id="exportBtn" class="secondary" disabled>Export CSV</button>
+  </div>
+  <div class="status" id="statusEl"></div>
+</div>
+
+<div class="panel">
+  <div class="seq-display" id="ctDisplay"><span class="lbl">Ciphertext (cleaned, positions are 0-indexed)</span></div>
+  <div style="height:10px"></div>
+  <div class="seq-display" id="ptDisplay"><span class="lbl">Plaintext (cleaned, positions are 0-indexed)</span></div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--hl-ct)"></span>Ciphertext window (hovered row)</span>
+    <span><span class="swatch" style="background:var(--hl-pt)"></span>Plaintext window (hovered row)</span>
+  </div>
+</div>
+
+<div class="panel" id="resultsPanel" style="display:none">
+  <div class="top-summary">
+    <div id="resultsSummary" class="status"></div>
+  </div>
+  <div class="pagination" id="paginationTop"></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>CT pos</th>
+          <th>PT pos</th>
+          <th>Shift</th>
+          <th>Derived sequence</th>
+          <th>Entropy (bits)</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="paginationBottom"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const A = 65;
+
+  function cleanText(s) {
+    return (s || "").toUpperCase().replace(/[^A-Z]/g, "");
+  }
+
+  function num(ch) { return ch.charCodeAt(0) - A; }
+  function chr(n) { return String.fromCharCode(((n % 26) + 26) % 26 + A); }
+
+  // Left rotation: rotateLeft("BERLIN", 1) === "ERLINB"
+  function rotateLeft(s, shift) {
+    const n = s.length;
+    const k = ((shift % n) + n) % n;
+    return s.slice(k) + s.slice(0, k);
+  }
+
+  // Vigenère-style addition mod 26 of two equal-length strings.
+  function addMod26(a, b) {
+    let out = "";
+    for (let i = 0; i < a.length; i++) {
+      out += chr(num(a[i]) + num(b[i]));
+    }
+    return out;
+  }
+
+  // Shannon entropy in bits over the letter frequencies of the string.
+  function entropy(s) {
+    const counts = {};
+    for (const c of s) counts[c] = (counts[c] || 0) + 1;
+    const n = s.length;
+    let h = 0;
+    for (const k in counts) {
+      const p = counts[k] / n;
+      h -= p * Math.log2(p);
+    }
+    return h;
+  }
+
+  // ---- DOM refs ----
+  const ctInput = document.getElementById("ctInput");
+  const ptInput = document.getElementById("ptInput");
+  const lInput = document.getElementById("lInput");
+  const pageSizeInput = document.getElementById("pageSizeInput");
+  const runBtn = document.getElementById("runBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const statusEl = document.getElementById("statusEl");
+  const ctDisplay = document.getElementById("ctDisplay");
+  const ptDisplay = document.getElementById("ptDisplay");
+  const resultsPanel = document.getElementById("resultsPanel");
+  const resultsSummary = document.getElementById("resultsSummary");
+  const resultsBody = document.getElementById("resultsBody");
+  const paginationTop = document.getElementById("paginationTop");
+  const paginationBottom = document.getElementById("paginationBottom");
+
+  // ---- State ----
+  let state = {
+    ctClean: "",
+    ptClean: "",
+    L: 0,
+    results: [],
+    page: 1,
+    pageSize: 50,
+    ctSpans: [],
+    ptSpans: []
+  };
+
+  function buildSpanDisplay(container, labelText, clean) {
+    container.innerHTML = "";
+    const lbl = document.createElement("span");
+    lbl.className = "lbl";
+    lbl.textContent = labelText;
+    container.appendChild(lbl);
+    const spans = [];
+    for (let i = 0; i < clean.length; i++) {
+      const sp = document.createElement("span");
+      sp.className = "ch";
+      sp.textContent = clean[i];
+      sp.title = "pos " + i;
+      container.appendChild(sp);
+      spans.push(sp);
+    }
+    return spans;
+  }
+
+  function clearHighlights() {
+    for (const sp of state.ctSpans) sp.classList.remove("hl-ct");
+    for (const sp of state.ptSpans) sp.classList.remove("hl-pt");
+  }
+
+  function highlightRange(spans, cls, start, len) {
+    for (let i = start; i < start + len && i < spans.length; i++) {
+      spans[i].classList.add(cls);
+    }
+  }
+
+  function runExperiment() {
+    statusEl.classList.remove("error");
+    const ctClean = cleanText(ctInput.value);
+    const ptClean = cleanText(ptInput.value);
+    const L = parseInt(lInput.value, 10);
+
+    if (!ctClean.length || !ptClean.length) {
+      statusEl.textContent = "Ciphertext and plaintext must contain at least one letter.";
+      statusEl.classList.add("error");
+      return;
+    }
+    if (!Number.isInteger(L) || L < 1) {
+      statusEl.textContent = "Substring length must be a positive integer.";
+      statusEl.classList.add("error");
+      return;
+    }
+    const numCT = ctClean.length - L + 1;
+    const numPT = ptClean.length - L + 1;
+    if (numCT < 1 || numPT < 1) {
+      statusEl.textContent = "Substring length L is longer than the ciphertext or plaintext.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    const totalCombos = numCT * numPT * L;
+    if (totalCombos > 300000) {
+      const ok = confirm(
+        "This will generate " + totalCombos.toLocaleString() +
+        " combinations, which may be slow. Continue?"
+      );
+      if (!ok) {
+        statusEl.textContent = "Run cancelled.";
+        return;
+      }
+    }
+
+    statusEl.textContent = "Running…";
+
+    // Defer so the "Running…" status can paint before the (possibly heavy) loop.
+    setTimeout(() => {
+      const t0 = performance.now();
+
+      // Precompute all L-length windows once.
+      const ctWindows = [];
+      for (let i = 0; i < numCT; i++) ctWindows.push(ctClean.substr(i, L));
+      const ptWindows = [];
+      for (let i = 0; i < numPT; i++) ptWindows.push(ptClean.substr(i, L));
+
+      const results = [];
+      for (let ci = 0; ci < numCT; ci++) {
+        const s1 = ctWindows[ci];
+        for (let pi = 0; pi < numPT; pi++) {
+          const s2 = ptWindows[pi];
+          for (let shift = 0; shift < L; shift++) {
+            const rotated = rotateLeft(s2, shift);
+            const derived = addMod26(s1, rotated);
+            const ent = entropy(derived);
+            results.push({ ctPos: ci, ptPos: pi, shift: shift, derived: derived, entropy: ent });
+          }
+        }
+      }
+
+      results.sort((a, b) => {
+        if (a.entropy !== b.entropy) return a.entropy - b.entropy;
+        if (a.ctPos !== b.ctPos) return a.ctPos - b.ctPos;
+        if (a.ptPos !== b.ptPos) return a.ptPos - b.ptPos;
+        return a.shift - b.shift;
+      });
+
+      const elapsed = (performance.now() - t0).toFixed(0);
+
+      state.ctClean = ctClean;
+      state.ptClean = ptClean;
+      state.L = L;
+      state.results = results;
+      state.page = 1;
+      state.pageSize = parseInt(pageSizeInput.value, 10);
+
+      state.ctSpans = buildSpanDisplay(ctDisplay, "Ciphertext (cleaned, positions are 0-indexed)", ctClean);
+      state.ptSpans = buildSpanDisplay(ptDisplay, "Plaintext (cleaned, positions are 0-indexed)", ptClean);
+
+      statusEl.textContent =
+        ctClean.length + "-letter ciphertext, " + ptClean.length + "-letter plaintext, L=" + L +
+        " → " + results.length.toLocaleString() + " combinations computed in " + elapsed + " ms.";
+
+      resultsPanel.style.display = "";
+      exportBtn.disabled = results.length === 0;
+      renderPage();
+    }, 10);
+  }
+
+  function totalPages() {
+    return Math.max(1, Math.ceil(state.results.length / state.pageSize));
+  }
+
+  function renderPagination(container) {
+    container.innerHTML = "";
+    const tp = totalPages();
+
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "secondary";
+    prevBtn.textContent = "Previous";
+    prevBtn.disabled = state.page <= 1;
+    prevBtn.addEventListener("click", () => { state.page--; renderPage(); });
+
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "secondary";
+    nextBtn.textContent = "Next";
+    nextBtn.disabled = state.page >= tp;
+    nextBtn.addEventListener("click", () => { state.page++; renderPage(); });
+
+    const pageLabel = document.createElement("span");
+    pageLabel.textContent = "Page";
+
+    const pageSelect = document.createElement("select");
+    for (let i = 1; i <= tp; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = i;
+      if (i === state.page) opt.selected = true;
+      pageSelect.appendChild(opt);
+    }
+    pageSelect.addEventListener("change", () => {
+      state.page = parseInt(pageSelect.value, 10);
+      renderPage();
+    });
+
+    const ofLabel = document.createElement("span");
+    ofLabel.textContent = "of " + tp;
+
+    container.appendChild(prevBtn);
+    container.appendChild(pageLabel);
+    container.appendChild(pageSelect);
+    container.appendChild(ofLabel);
+    container.appendChild(nextBtn);
+  }
+
+  function renderPage() {
+    const tp = totalPages();
+    if (state.page > tp) state.page = tp;
+    if (state.page < 1) state.page = 1;
+
+    const start = (state.page - 1) * state.pageSize;
+    const pageItems = state.results.slice(start, start + state.pageSize);
+
+    resultsSummary.textContent =
+      "Showing " + (state.results.length ? start + 1 : 0) + "–" +
+      Math.min(start + state.pageSize, state.results.length) +
+      " of " + state.results.length.toLocaleString() + " results (sorted by ascending entropy).";
+
+    resultsBody.innerHTML = "";
+    pageItems.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+
+      const rankTd = document.createElement("td");
+      rankTd.className = "rank";
+      rankTd.textContent = start + idx + 1;
+
+      const ctTd = document.createElement("td");
+      ctTd.textContent = r.ctPos;
+
+      const ptTd = document.createElement("td");
+      ptTd.textContent = r.ptPos;
+
+      const shiftTd = document.createElement("td");
+      shiftTd.textContent = r.shift;
+
+      const seqTd = document.createElement("td");
+      seqTd.textContent = r.derived;
+
+      const entTd = document.createElement("td");
+      entTd.textContent = r.entropy.toFixed(4);
+
+      tr.appendChild(rankTd);
+      tr.appendChild(ctTd);
+      tr.appendChild(ptTd);
+      tr.appendChild(shiftTd);
+      tr.appendChild(seqTd);
+      tr.appendChild(entTd);
+
+      tr.addEventListener("mouseenter", () => {
+        clearHighlights();
+        highlightRange(state.ctSpans, "hl-ct", r.ctPos, state.L);
+        highlightRange(state.ptSpans, "hl-pt", r.ptPos, state.L);
+      });
+      tr.addEventListener("mouseleave", clearHighlights);
+
+      resultsBody.appendChild(tr);
+    });
+
+    renderPagination(paginationTop);
+    renderPagination(paginationBottom);
+  }
+
+  function exportCSV() {
+    if (!state.results.length) return;
+    const lines = ["rank,ct_pos,pt_pos,shift,derived_sequence,entropy_bits"];
+    state.results.forEach((r, i) => {
+      lines.push([i + 1, r.ctPos, r.ptPos, r.shift, r.derived, r.entropy.toFixed(6)].join(","));
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "k4-anomaly-results.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  runBtn.addEventListener("click", runExperiment);
+  exportBtn.addEventListener("click", exportCSV);
+
+  // Initial display of the default (cleaned) CT/PT before any run.
+  buildSpanDisplay(ctDisplay, "Ciphertext (cleaned, positions are 0-indexed)", cleanText(ctInput.value));
+  buildSpanDisplay(ptDisplay, "Plaintext (cleaned, positions are 0-indexed)", cleanText(ptInput.value));
+})();
+</script>
+</body>
+</html>
