@@ -380,7 +380,7 @@
             const rotated = rotateLeft(s2, shift);
             const derived = addMod26(s1, rotated);
             const ent = entropy(derived);
-            results.push({ ctPos: ci, ptPos: pi, shift: shift, derived: derived, entropy: ent });
+            results.push({ ctPos: ci, ptPos: pi, shift: shift, rotated: rotated, derived: derived, entropy: ent });
           }
         }
       }
@@ -488,7 +488,7 @@
       ptTd.textContent = r.ptPos;
 
       const shiftTd = document.createElement("td");
-      shiftTd.textContent = r.shift;
+      shiftTd.textContent = r.shift + " (" + r.rotated + ")";
 
       const seqTd = document.createElement("td");
       seqTd.textContent = r.derived;
@@ -519,9 +519,9 @@
 
   function exportCSV() {
     if (!state.results.length) return;
-    const lines = ["rank,ct_pos,pt_pos,shift,derived_sequence,entropy_bits"];
+    const lines = ["rank,ct_pos,pt_pos,shift,shifted_plaintext,derived_sequence,entropy_bits"];
     state.results.forEach((r, i) => {
-      lines.push([i + 1, r.ctPos, r.ptPos, r.shift, r.derived, r.entropy.toFixed(6)].join(","));
+      lines.push([i + 1, r.ctPos, r.ptPos, r.shift, r.rotated, r.derived, r.entropy.toFixed(6)].join(","));
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
