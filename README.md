@@ -1,7 +1,11 @@
 # kryptos
 A place for my Kryptos junk.
 
-# azdecrypt
+## tools
+
+* [Vigenère Anomaly Experiment](https://doranchak.github.io/kryptos/john-graham-cumming-pattern/) to explore an [observation by John Graham-Cumming](https://doranchak.github.io/kryptos/john-graham-cumming-pattern/info.txt).
+
+## azdecrypt
 
 Procedure to solve K3:
 
@@ -15,7 +19,7 @@ Procedure to solve K3:
 * In main AZDecrypt window, click "Solve" button again.
 * Solver runs and solution should appear shortly.
 
-# cipher type identification
+## cipher type identification
 
 Results of running various cipher type identifiers on K1-K4:
 * [Spreadsheet](https://docs.google.com/spreadsheets/d/1G2VXt4d_Fx2UH9Sc918rMHaHvJWIvjcCdu_xQyuzRCs/edit?usp=sharing)
@@ -29,12 +33,12 @@ Identifiers:
 * [dCode.fr](https://www.dcode.fr/cipher-identifier)
 * [NCID](https://www.cryptool.org/en/cto/ncid)
 
-# papers
+## papers
 
 * [Richard Bean - Cryptodiagnosis of "Kryptos K4"](https://ecp.ep.liu.se/index.php/histocrypt/article/view/153)
 * [Craig Bauer - James Sanborn’s Kryptos and the matrix encryption conjecture](https://www.tandfonline.com/doi/abs/10.1080/01611194.2016.1141556)
 
-# more info
+## more info
 * [Kryptos on Wikipedia](https://en.wikipedia.org/wiki/Kryptos)
 * [Quagmire info and ACA articles](info-and-articles/Quagmire%20Articles)
 * [Sanborn's page](https://jimsanborn.net)
