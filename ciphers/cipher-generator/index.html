@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kryptos Cipher Generator</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>Cipher Generator</h1>
+    <p class="subtitle">Manual encrypt / decrypt, and bulk cipher-sample generation, for 23 classical pen-and-paper ciphers.</p>
+  </header>
+
+  <div class="controls-bar">
+    <label class="field">
+      <span>Cipher type</span>
+      <select id="cipherSelect"></select>
+    </label>
+    <div class="mode-tabs" role="tablist">
+      <button class="tab-btn active" data-mode="manual" type="button">Encrypt / Decrypt</button>
+      <button class="tab-btn" data-mode="generate" type="button">Generate Ciphers</button>
+    </div>
+  </div>
+
+  <!-- ==================== Manual encrypt / decrypt ==================== -->
+  <section id="manualPanel" class="panel">
+    <div class="direction-toggle">
+      <label><input type="radio" name="direction" value="encrypt" checked> Encrypt</label>
+      <label><input type="radio" name="direction" value="decrypt"> Decrypt</label>
+    </div>
+
+    <div class="key-section">
+      <div class="key-fields-header">
+        <h3>Key</h3>
+        <button id="randomKeyBtn" type="button" class="btn-secondary">Random key</button>
+      </div>
+      <div class="key-fields" id="keyFields"></div>
+      <p class="hint" id="cipherHint"></p>
+    </div>
+
+    <div class="io-row">
+      <label class="io-block">
+        <span id="inputLabel">Plaintext</span>
+        <textarea id="inputText" rows="5" spellcheck="false" placeholder="Type or paste text here. It will be normalized to A-Z automatically."></textarea>
+      </label>
+      <div class="run-col">
+        <button id="runBtn" type="button" class="btn-primary">Run &rarr;</button>
+      </div>
+      <label class="io-block">
+        <span>Output</span>
+        <textarea id="outputText" rows="5" spellcheck="false" readonly></textarea>
+      </label>
+    </div>
+    <div id="manualError" class="error" hidden></div>
+  </section>
+
+  <!-- ==================== Generation mode ==================== -->
+  <section id="generatePanel" class="panel" hidden>
+    <div class="gen-controls">
+      <label class="field">
+        <span>Target ciphertext length</span>
+        <input type="number" id="targetLength" value="97" min="1" max="5000">
+      </label>
+      <label class="field">
+        <span>Quantity</span>
+        <input type="number" id="quantity" value="10" min="1" max="50000">
+      </label>
+      <button id="generateBtn" type="button" class="btn-primary">Generate</button>
+      <button id="cancelBtn" type="button" class="btn-secondary" hidden>Cancel</button>
+      <button id="exportCsvBtn" type="button" class="btn-secondary" disabled>Export CSV</button>
+    </div>
+    <p class="hint">The target length is the number of <em>plaintext</em> letters selected (no spaces). Ciphers that
+      fractionate or expand text (Homophonic, ADFGX, ADFGVX) will produce a longer final ciphertext; Hill and
+      Playfair may pad by a letter or two.</p>
+
+    <div id="genProgress" class="progress" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="progress-text" id="progressText"></span>
+    </div>
+    <div id="genSummary" class="gen-summary"></div>
+
+    <div class="results-table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th class="col-idx">#</th>
+            <th>Cipher</th>
+            <th>Key information</th>
+            <th>Ciphertext</th>
+            <th>Plaintext</th>
+            <th class="col-len">Len</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button id="prevPage" type="button" class="btn-secondary">&larr; Prev</button>
+      <span class="page-indicator">
+        Page <input type="number" id="pageInput" min="1" value="1"> of <span id="pageCount">1</span>
+      </span>
+      <button id="nextPage" type="button" class="btn-secondary">Next &rarr;</button>
+      <label class="field inline">
+        <span>Rows / page</span>
+        <select id="pageSize">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <span id="corpusStats"></span>
+  </footer>
+</div>
+
+<script src="js/data/corpora_data.js"></script>
+<script src="js/data/dictionary_data.js"></script>
+<script src="js/ciphers.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
