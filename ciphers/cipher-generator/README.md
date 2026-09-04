@@ -12,10 +12,17 @@ is embedded directly into the page via `js/data/*.js`.
 
 ## Features
 
-- **23 cipher types**: simple substitution, homophonic substitution, autokey,
+- **25 cipher types**: simple substitution, homophonic substitution, autokey,
   columnar transposition, double columnar transposition, rail fence,
   Myszkowski transposition, ADFGX, ADFGVX, bifid, trifid, Quagmire I-IV,
-  running key, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale.
+  running key, **running key + transposition**, **transposition + running
+  key**, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale.
+  The two running-key-plus-transposition ciphers are two-layer: a Running
+  Key encryption and a transposition step (either simple periodic — an
+  explicit numeric column order like `3,1,4,2` — or ordinary keyword-based
+  columnar), applied in one order or the other. Which sub-type the
+  transposition key field means is auto-detected: digits/commas -> simple
+  periodic, letters -> columnar keyword.
 - **Manual encrypt/decrypt mode**: pick a cipher, fill in (or randomize) its
   key, type plaintext or ciphertext, run it.
 - **Generation mode**: pick a target plaintext length (default 97, matching
@@ -31,6 +38,13 @@ is embedded directly into the page via `js/data/*.js`.
   4. Encrypt, and add the row to a paginated results table.
 - **CSV export** with columns: cipher type label, key information,
   ciphertext, plaintext without spaces, plaintext with spaces.
+- **Visualizer mode**: pick a cipher, load the built-in sample (or type your
+  own plaintext/ciphertext), and hover any letter to see exactly how it maps
+  to the other side — which key-table cell, alphabet position, transposition
+  column, or Polybius/Playfair/Trifid grid cell produced it — plus a formula
+  with the current values filled in. For two-layer ciphers (double columnar
+  transposition, ADFGX/ADFGVX, and the two running-key-plus-transposition
+  ciphers) it shows both stages and traces a letter's position through both.
 
 Note: the target length governs the *plaintext* letter count that gets
 selected, not necessarily the final ciphertext length — ciphers that
@@ -73,10 +87,15 @@ you rebuild.
 - `js/generator.js` — the plaintext-sampling and bulk-generation engine.
 - `js/app.js` — UI wiring (cipher/mode selection, manual run, generation
   progress, pagination, CSV export).
+- `js/visualizer.js` — the letter-by-letter visualizer: per-cipher adapters
+  that reuse ciphers.js's internal helpers (exported on `window.CipherLib`)
+  to build the exact same tables/grids/permutations `encrypt()`/`decrypt()`
+  use, so highlighting can never drift from the real cipher logic.
 - `scripts/test_ciphers.js` — a Node-based self-test: round-trips every
   cipher, and checks exact-match reference vectors for the Quagmire ciphers
   (against the ACA "Cryptogram" reference examples and the real Kryptos
-  K1/K2 ciphertexts), Vigenère, Playfair, Rail Fence, and Hill. Run with
+  K1/K2 ciphertexts), Vigenère, Playfair, Rail Fence, Hill, and both
+  running-key-plus-transposition ciphers (hand-worked vectors). Run with
   `node scripts/test_ciphers.js`.
 
 ## Notes on cipher fidelity

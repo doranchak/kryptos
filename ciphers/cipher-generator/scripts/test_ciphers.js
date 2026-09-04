@@ -169,6 +169,54 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(CIPHERS.quagmire4.decrypt(ct, key), pt, 'Quagmire IV decrypt round-trip');
 }
 
+// --- Running Key + Transposition / Transposition + Running Key: hand-worked vectors ---
+// pt="ATTACKATDAWN", running key text "QWERTYUIOPAS" (12 letters, matches pt length).
+// Columnar transposition keyword "ZEBRA" -> column read order [4,2,1,3,0]
+// (grid: col0=[0,5,10] col1=[1,6,11] col2=[2,7] col3=[3,8] col4=[4,9]).
+{
+  const pt = 'ATTACKATDAWN';
+  const runningKey = { keyText: 'QWERTYUIOPAS' };
+  const columnarTrans = { mode: 'columnar', keyword: 'ZEBRA' };
+  const periodicTrans = { mode: 'periodic', period: 4, rank: [2, 0, 3, 1] }; // numeric key "3,1,4,2"
+
+  // running key first (C0 = QPXRVIUBRPWF), then columnar-transpose C0.
+  {
+    const key = { runningKey, transposition: columnarTrans };
+    const ct = CIPHERS.running_key_transposition.encrypt(pt, key);
+    assertEq(ct, 'VPXBPUFRRQIW', 'Running Key + Transposition (columnar), hand-worked');
+    assertEq(CIPHERS.running_key_transposition.decrypt(ct, key), pt, 'Running Key + Transposition (columnar) decrypt round-trip');
+  }
+  // running key first, then simple-periodic-transpose C0.
+  {
+    const key = { runningKey, transposition: periodicTrans };
+    const ct = CIPHERS.running_key_transposition.encrypt(pt, key);
+    assertEq(ct, 'PIPRBFQVRXUW', 'Running Key + Transposition (simple periodic), hand-worked');
+    assertEq(CIPHERS.running_key_transposition.decrypt(ct, key), pt, 'Running Key + Transposition (simple periodic) decrypt round-trip');
+  }
+  // columnar-transpose pt first (CATTTANADAKW), then running-key-encrypt that.
+  {
+    const key = { transposition: columnarTrans, runningKey };
+    const ct = CIPHERS.transposition_running_key.encrypt(pt, key);
+    assertEq(ct, 'SWXKMYHIRPKO', 'Transposition + Running Key (columnar), hand-worked');
+    assertEq(CIPHERS.transposition_running_key.decrypt(ct, key), pt, 'Transposition + Running Key (columnar) decrypt round-trip');
+  }
+}
+
+// --- Transposition key auto-detection (keyFromValues) ---
+{
+  const periodic = CIPHERS.running_key_transposition.keyFromValues({ keyText: 'ABCDEFGHIJKL', transKey: '3, 1, 4, 2' });
+  assertEq(periodic.transposition.mode, 'periodic', 'Numeric transposition key auto-detected as periodic');
+  assertEq(periodic.transposition.rank.join(','), '2,0,3,1', 'Periodic transposition key parsed to correct 0-based rank');
+
+  const columnar = CIPHERS.running_key_transposition.keyFromValues({ keyText: 'ABCDEFGHIJKL', transKey: 'ZEBRA' });
+  assertEq(columnar.transposition.mode, 'columnar', 'Alphabetic transposition key auto-detected as columnar');
+
+  let threw = false;
+  try { CIPHERS.running_key_transposition.keyFromValues({ keyText: 'ABCDEFGHIJKL', transKey: '1,1,2' }); }
+  catch (e) { threw = true; }
+  assertTrue(threw, 'Non-permutation periodic transposition key is rejected');
+}
+
 // --- Vigenere textbook vector ---
 {
   const key = { keyword: 'LEMON' };

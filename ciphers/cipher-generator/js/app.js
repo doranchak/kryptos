@@ -14,7 +14,8 @@
     'columnar_transposition', 'double_columnar_transposition', 'rail_fence',
     'myszkowski', 'adfgx', 'adfgvx', 'bifid', 'trifid',
     'quagmire1', 'quagmire2', 'quagmire3', 'quagmire4',
-    'running_key', 'vigenere', 'enigma', 'beaufort', 'porta', 'playfair',
+    'running_key', 'running_key_transposition', 'transposition_running_key',
+    'vigenere', 'enigma', 'beaufort', 'porta', 'playfair',
     'hill', 'scytale',
   ];
 
@@ -35,6 +36,8 @@
     quagmire3: 'The same keyed alphabet is used for both plaintext and ciphertext (this is the system used for Kryptos K1 and K2).',
     quagmire4: 'Independent keyed alphabets for plaintext and ciphertext, indexed by an indicator word.',
     running_key: 'Like Vigenere, but the key is a long, non-repeating passage of text (here, sampled from a different corpus excerpt) at least as long as the plaintext.',
+    running_key_transposition: 'Two-layer cipher: Running Key encryption first, then the result is transposed (simple periodic, or keyword-based columnar).',
+    transposition_running_key: 'Two-layer cipher: a transposition (simple periodic, or keyword-based columnar) first, then the transposed text is encrypted with Running Key.',
     vigenere: 'Polyalphabetic shift cipher: C = P + K (mod 26), key repeats.',
     enigma: 'Simulated Wehrmacht Enigma I: 3 rotors (choice of I-V), ring settings, initial positions, reflector B/C, and an optional plugboard.',
     beaufort: 'Self-reciprocal variant: C = K - P (mod 26); the same operation decrypts.',
@@ -70,15 +73,19 @@
   // Mode tabs (manual vs generate)
   // ---------------------------------------------------------------------
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const manualPanel = document.getElementById('manualPanel');
-  const generatePanel = document.getElementById('generatePanel');
+  const modePanels = {
+    manual: document.getElementById('manualPanel'),
+    generate: document.getElementById('generatePanel'),
+    visualize: document.getElementById('visualizePanel'),
+  };
   tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       tabBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       const mode = btn.dataset.mode;
-      manualPanel.hidden = mode !== 'manual';
-      generatePanel.hidden = mode !== 'generate';
+      Object.keys(modePanels).forEach((m) => {
+        if (modePanels[m]) modePanels[m].hidden = m !== mode;
+      });
     });
   });
 

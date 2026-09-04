@@ -10,7 +10,7 @@
 <div class="app">
   <header class="app-header">
     <h1>Cipher Generator</h1>
-    <p class="subtitle">Manual encrypt / decrypt, and bulk cipher-sample generation, for 23 classical pen-and-paper ciphers.</p>
+    <p class="subtitle">Manual encrypt / decrypt, and bulk cipher-sample generation, for 25 classical pen-and-paper ciphers.</p>
   </header>
 
   <div class="controls-bar">
@@ -21,6 +21,7 @@
     <div class="mode-tabs" role="tablist">
       <button class="tab-btn active" data-mode="manual" type="button">Encrypt / Decrypt</button>
       <button class="tab-btn" data-mode="generate" type="button">Generate Ciphers</button>
+      <button class="tab-btn" data-mode="visualize" type="button">Visualizer</button>
     </div>
   </div>
 
@@ -115,6 +116,47 @@
     </div>
   </section>
 
+  <!-- ==================== Visualizer ==================== -->
+  <section id="visualizePanel" class="panel" hidden>
+    <div class="viz-toolbar">
+      <button id="vizSampleBtn" type="button" class="btn-secondary">Load built-in sample</button>
+      <p class="hint">Showing a built-in sample plaintext, key, and resulting ciphertext for the selected cipher. Edit the
+        plaintext <em>or</em> the ciphertext below (whichever you edit becomes the source) and the other side updates
+        automatically from the key. Hover (or tap) a letter to see how it connects.</p>
+    </div>
+
+    <div class="key-section">
+      <div class="key-fields-header"><h3>Key</h3></div>
+      <div class="key-fields" id="vizKeyFields"></div>
+    </div>
+
+    <div class="viz-io-row">
+      <div class="viz-io-block">
+        <div class="viz-io-header"><span>Plaintext</span></div>
+        <textarea id="vizPtInput" rows="3" spellcheck="false" placeholder="Type or paste plaintext here..."></textarea>
+        <div class="viz-strip" id="vizPtStrip"></div>
+      </div>
+      <div class="viz-io-block">
+        <div class="viz-io-header"><span>Ciphertext</span></div>
+        <textarea id="vizCtInput" rows="3" spellcheck="false" placeholder="...or type/paste ciphertext instead"></textarea>
+        <div class="viz-strip" id="vizCtStrip"></div>
+      </div>
+    </div>
+    <div id="vizError" class="error" hidden></div>
+
+    <div class="viz-detail-row">
+      <div class="viz-formula-panel" id="vizFormulaPanel">
+        <h3>Formula</h3>
+        <div class="viz-formula-template mono" id="vizFormulaTemplate"></div>
+        <div class="viz-formula-current mono" id="vizFormulaCurrent">Hover a plaintext or ciphertext letter to see the current values.</div>
+      </div>
+      <div class="viz-key-panel">
+        <h3 id="vizKeyInfoTitle">Key information</h3>
+        <div id="vizKeyInfoPanel"></div>
+      </div>
+    </div>
+  </section>
+
   <footer class="app-footer">
     <span id="corpusStats"></span>
   </footer>
@@ -125,5 +167,6 @@
 <script src="js/ciphers.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/app.js"></script>
+<script src="js/visualizer.js"></script>
 </body>
 </html>

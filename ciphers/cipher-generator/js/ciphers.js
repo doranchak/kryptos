@@ -824,6 +824,126 @@
   });
 
   // ---------------------------------------------------------------------
+  // Running Key + Transposition / Transposition + Running Key
+  //
+  // Two-layer ciphers: a Running Key encryption plus a transposition step,
+  // applied before or after. The transposition step can be either "simple
+  // periodic" (an explicit numeric column-read order, entered as a
+  // comma-separated permutation like "3,1,4,2") or ordinary keyword-based
+  // columnar transposition - both reduce to the same columnar transposition
+  // core (columnarEncryptRaw/columnarDecryptRaw above), just with a
+  // different source for the column read order. Which one the user meant is
+  // auto-detected from the transposition key field: digits -> periodic,
+  // letters -> columnar.
+  // ---------------------------------------------------------------------
+  function parseTranspositionKey(raw) {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) throw new Error('Transposition key must not be empty.');
+    if (/^[0-9]+([,\s]+[0-9]+)*$/.test(trimmed)) {
+      const nums = trimmed.split(/[,\s]+/).map((v) => parseInt(v, 10));
+      const period = nums.length;
+      if (period < 2) throw new Error('Simple periodic transposition needs at least 2 columns.');
+      const sorted = nums.slice().sort((a, b) => a - b);
+      for (let i = 0; i < period; i++) {
+        if (sorted[i] !== i + 1) throw new Error('Simple periodic transposition key must be a permutation of 1..N (e.g. 3,1,4,2).');
+      }
+      return { mode: 'periodic', period, rank: nums.map((v) => v - 1), display: nums.join(',') };
+    }
+    const letters = onlyLetters(trimmed);
+    if (letters.length < 2) throw new Error('Columnar transposition keyword must have at least 2 letters (or use a numeric permutation like 3,1,4,2 for simple periodic transposition).');
+    if (new Set(letters).size !== letters.length) throw new Error('Columnar transposition keyword letters must be distinct (or use a numeric permutation like 3,1,4,2 for simple periodic transposition).');
+    return { mode: 'columnar', keyword: letters, display: letters };
+  }
+
+  function transpositionOrder(t) {
+    return t.mode === 'periodic' ? orderFromRanks(t.rank) : orderFromRanks(keywordColumnRanks(t.keyword));
+  }
+
+  function transpositionKeyInfo(t) {
+    return t.mode === 'periodic' ? `periodic(${t.period})=${t.display}` : `columnar=${t.display}`;
+  }
+
+  function randomTranspositionKey() {
+    if (randChoice([true, false])) {
+      const period = randInt(4, 8);
+      const perm = shuffled(Array.from({ length: period }, (_, i) => i + 1));
+      return { mode: 'periodic', period, rank: perm.map((v) => v - 1), display: perm.join(',') };
+    }
+    const keyword = pickDistinctLetterWord(5, 9);
+    return { mode: 'columnar', keyword, display: keyword };
+  }
+
+  function randomRunningKeyTranspositionKey(opts) {
+    const rk = CIPHERS.running_key.randomKey(opts);
+    const transposition = randomTranspositionKey();
+    return {
+      key: { runningKey: rk.key, transposition },
+      values: { keyText: rk.values.keyText, transKey: transposition.display },
+    };
+  }
+
+  const TRANS_KEY_FIELD = {
+    name: 'transKey',
+    label: 'Transposition key (keyword for columnar, or a comma-separated permutation like 3,1,4,2 for simple periodic)',
+    type: 'text',
+    placeholder: 'e.g. ZEBRAS or 3,1,4,2',
+  };
+  const RUNNING_KEY_TEXT_FIELD = {
+    name: 'keyText',
+    label: 'Running key text (letters only, at least as long as the plaintext)',
+    type: 'textarea',
+    placeholder: 'a long passage of key text...',
+  };
+
+  register({
+    id: 'running_key_transposition',
+    label: 'Running Key + Transposition',
+    fields: [RUNNING_KEY_TEXT_FIELD, TRANS_KEY_FIELD],
+    randomKey(opts) { return randomRunningKeyTranspositionKey(opts); },
+    keyFromValues(values) {
+      const runningKey = CIPHERS.running_key.keyFromValues({ keyText: values.keyText });
+      const transposition = parseTranspositionKey(values.transKey);
+      return { runningKey, transposition };
+    },
+    keyInfo(key) {
+      return `${CIPHERS.running_key.keyInfo(key.runningKey)} transposition=${transpositionKeyInfo(key.transposition)}`;
+    },
+    // Running key first, then transpose the result.
+    encrypt(pt, key) {
+      const innerCt = CIPHERS.running_key.encrypt(pt, key.runningKey);
+      return columnarEncryptRaw(innerCt, transpositionOrder(key.transposition));
+    },
+    decrypt(ct, key) {
+      const innerCt = columnarDecryptRaw(ct, transpositionOrder(key.transposition));
+      return CIPHERS.running_key.decrypt(innerCt, key.runningKey);
+    },
+  });
+
+  register({
+    id: 'transposition_running_key',
+    label: 'Transposition + Running Key',
+    fields: [TRANS_KEY_FIELD, RUNNING_KEY_TEXT_FIELD],
+    randomKey(opts) { return randomRunningKeyTranspositionKey(opts); },
+    keyFromValues(values) {
+      const transposition = parseTranspositionKey(values.transKey);
+      const runningKey = CIPHERS.running_key.keyFromValues({ keyText: values.keyText });
+      return { transposition, runningKey };
+    },
+    keyInfo(key) {
+      return `transposition=${transpositionKeyInfo(key.transposition)} ${CIPHERS.running_key.keyInfo(key.runningKey)}`;
+    },
+    // Transpose first, then apply the running key to the transposed text.
+    encrypt(pt, key) {
+      const transposed = columnarEncryptRaw(pt, transpositionOrder(key.transposition));
+      return CIPHERS.running_key.encrypt(transposed, key.runningKey);
+    },
+    decrypt(ct, key) {
+      const transposed = CIPHERS.running_key.decrypt(ct, key.runningKey);
+      return columnarDecryptRaw(transposed, transpositionOrder(key.transposition));
+    },
+  });
+
+  // ---------------------------------------------------------------------
   // ADFGX / ADFGVX
   // ---------------------------------------------------------------------
   function buildPolybiusSquare(keyword, symbols, size) {
@@ -1280,7 +1400,7 @@
       return numLetter(c);
     }
 
-    return { encodeChar };
+    return { encodeChar, getPositions: () => positions.slice() };
   }
 
   function enigmaProcess(text, key) {
@@ -1344,6 +1464,11 @@
   });
 
   // ===========================================================================
+  // Internal helpers re-exported for the Visualizer (js/visualizer.js), so it
+  // can reconstruct exactly the same tables / grids / permutations that
+  // encrypt()/decrypt() use, instead of re-implementing (and risking drift
+  // from) this logic.
+  // ===========================================================================
   global.CipherLib = {
     CIPHERS,
     ALPHABET,
@@ -1355,8 +1480,33 @@
     randChoice,
     shuffled,
     keyedAlphabet26,
+    keyedSymbolSequence,
     pickDictionaryWord,
     pickDistinctDictionaryWords,
     pickDistinctLetterWord,
+    keywordColumnRanks,
+    orderFromRanks,
+    rangeArray,
+    columnarEncryptRaw,
+    columnarDecryptRaw,
+    parseTranspositionKey,
+    transpositionOrder,
+    transpositionKeyInfo,
+    buildHomophoneTables,
+    ENGLISH_FREQ,
+    buildPolybiusSquare,
+    buildTrifidCube,
+    TRIFID_FILLER,
+    buildPlayfairGrid,
+    playfairDigraphs,
+    matVecMul,
+    matInverse,
+    matDet,
+    egcd,
+    modInverse,
+    ROTOR_WIRING,
+    ROTOR_NOTCH,
+    REFLECTOR_WIRING,
+    buildEnigmaMachine,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

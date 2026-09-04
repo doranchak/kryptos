@@ -177,3 +177,76 @@ td.mono, .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
   .io-row { grid-template-columns: 1fr; }
   .run-col { justify-content: center; }
 }
+
+/* ==================== Visualizer ==================== */
+.viz-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.viz-toolbar .hint { margin: 0; flex: 1 1 320px; }
+
+.viz-io-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.viz-io-block { display: flex; flex-direction: column; gap: 6px; }
+.viz-io-header { font-weight: 600; font-size: 0.85rem; color: var(--text-muted); }
+
+.viz-strip {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--mono-bg);
+  min-height: 2.6em; align-content: flex-start;
+}
+.viz-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.6em; height: 1.6em; border-radius: 4px; cursor: pointer;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.95rem;
+  user-select: none; color: var(--text);
+}
+.viz-letter:hover { background: var(--table-stripe); }
+.viz-letter.hl-active { background: var(--accent); color: var(--accent-contrast); }
+.viz-letter.hl-linked { background: var(--accent-hover); color: var(--accent-contrast); }
+.viz-letter.hl-key-source { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.viz-strip-placeholder { color: var(--text-muted); font-size: 0.85rem; padding: 4px; }
+
+.viz-detail-row { display: grid; grid-template-columns: 300px 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+.viz-formula-panel, .viz-key-panel {
+  background: var(--mono-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+}
+.viz-formula-panel h3, .viz-key-panel h3 { margin: 0 0 8px; font-size: 0.95rem; }
+.viz-formula-template { font-size: 0.95rem; margin-bottom: 8px; }
+.viz-formula-current { font-size: 0.88rem; color: var(--text-muted); min-height: 1.4em; line-height: 1.5; white-space: pre-line; }
+.viz-formula-current strong { color: var(--text); }
+
+.viz-note { font-size: 0.82rem; color: var(--text-muted); margin: 6px 0 0; }
+.viz-subheading { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.02em; }
+.viz-subheading:first-child { margin-top: 0; }
+
+.viz-strip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin: 3px 0; }
+.viz-strip-row-label { font-size: 0.78rem; color: var(--text-muted); width: 92px; flex: 0 0 auto; }
+
+.viz-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.7em; height: 1.7em; padding: 0 2px; border-radius: 3px;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.82rem;
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+}
+.viz-cell.hl { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); font-weight: 600; }
+.viz-cell.hl-soft { border-color: var(--accent); background: var(--table-stripe); }
+
+.viz-grid-wrap { overflow-x: auto; }
+.viz-table { border-collapse: collapse; font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.78rem; margin-bottom: 8px; }
+.viz-table td, .viz-table th {
+  border: 1px solid var(--border); width: 1.6em; height: 1.6em; text-align: center; padding: 0;
+}
+.viz-table th { background: var(--table-head); font-weight: 600; position: sticky; }
+.viz-table th.viz-corner { background: var(--table-head); }
+.viz-table td.hl { background: var(--accent); color: var(--accent-contrast); font-weight: 700; }
+.viz-table td.hl-line, .viz-table th.hl-line { background: var(--table-stripe); }
+.viz-table th.hl { background: var(--accent); color: var(--accent-contrast); }
+
+.viz-col-group { display: inline-flex; flex-direction: column; align-items: center; margin: 0 10px 8px 0; vertical-align: top; }
+.viz-col-header { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 3px; text-align: center; white-space: nowrap; }
+.viz-col-group .viz-cell { margin-bottom: 2px; }
+
+.viz-homophone-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.85rem; flex-wrap: wrap; }
+.viz-homophone-letter { width: 1.4em; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .viz-detail-row { grid-template-columns: 1fr; }
+  .viz-io-row { grid-template-columns: 1fr; }
+}
