@@ -61,6 +61,15 @@ When the user hovers over a plaintext letter, the corresponding ciphertext lette
 
 If the cipher process can be represented arithmetically, show the formula and its current values when the user hovers over a plaintext or ciphertext letter.  For example, show the modulo arithmetic for Vigenere: C(i) = P(i) + K(i) (mod 26), and current values when user hovers over plaintext or ciphertext letters.
 
+===
+
+Modify the cipher generator by splitting Running Key into four new categories:
+- Running Key I. Like Quagmire I, it supports a keyed plaintext alphabet.
+- Running Key II. Like Quagmire II, it supports a keyed ciphertext alphabet.
+- Running Key III. Like Quagmire III, it supports keyed plaintext and ciphertext alphabets, but they both use the same keyword.
+- Running Key IV. Like Quagmire IV, it supports keyed plaintext and ciphertext alphabets, but they both use different keywords.
+
+===
 
 
 

@@ -208,6 +208,39 @@
     table.appendChild(tbody); wrap.appendChild(table); container.appendChild(wrap);
   }
 
+  // Full Quagmire/Running-Key-style tableau: 26 rows, one per possible
+  // indicator/running-key letter K (A-Z), against 26 columns headed by
+  // `colAlphabet` (whichever alphabet - straight or keyed - is used for the
+  // plaintext side of this variant). Cell(K, col j) = ctAlphabet[(shiftForKey(K)
+  // + j) mod 26], i.e. row K is ctAlphabet rotated by that key letter's shift -
+  // exactly the row a paper-and-pencil Quagmire/Running Key tableau shows, per
+  // the ACA reference examples (QuagmireI-IV.pdf), generalized to all 26
+  // possible key letters instead of just the ones a specific indicator word
+  // uses. Column j always represents plaintext letter colAlphabet[j], so
+  // ids line up with the M-position (or straight index) already computed by
+  // each variant's hover function.
+  function renderAlphabetTableau(container, colAlphabet, ctAlphabet, shiftForKey, registerHl) {
+    const wrap = el('div', 'viz-grid-wrap');
+    const table = document.createElement('table'); table.className = 'viz-table';
+    const thead = document.createElement('thead'); const hr = document.createElement('tr');
+    hr.appendChild(el('th', 'viz-corner'));
+    colAlphabet.forEach((ch, j) => { const th = document.createElement('th'); th.textContent = ch; registerHl('tq-col-' + j, th); hr.appendChild(th); });
+    thead.appendChild(hr); table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for (let k = 0; k < 26; k++) {
+      const tr = document.createElement('tr');
+      const shift = shiftForKey(ALPHABET[k]);
+      const rh = document.createElement('th'); rh.textContent = ALPHABET[k]; registerHl('tq-row-' + k, rh); tr.appendChild(rh);
+      for (let j = 0; j < 26; j++) {
+        const td = document.createElement('td'); td.textContent = ctAlphabet[mod(shift + j, 26)];
+        registerHl('tq-cell-' + k + '-' + j, td);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody); wrap.appendChild(table); container.appendChild(wrap);
+  }
+
   // ---------------------------------------------------------------------
   // Adapter registry. Each adapter: { build(pt,ct,key)->state,
   // renderKeyPanel(container,state,registerHl), formulaTemplate (string, or
@@ -385,38 +418,59 @@
     const { variant, key, pt } = state;
     const p = pt[i];
     const ind = key.indicator; const indChar = ind[i % ind.length]; const indPos = i % ind.length;
-    const keyIds = [{ id: 'ind-' + indPos, cls: 'hl' }];
+    const kn = letterNum(indChar);
+    const keyIds = [{ id: 'ind-' + indPos, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }];
     let current;
     if (variant === 'I') {
       const { M, Minv, anchor } = state;
       const posP = Minv[letterNum(p)];
-      const kn = letterNum(indChar);
       const idx = mod(kn - anchor + posP, 26);
-      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `M-position of P='${p}' is ${posP}.  indicator '${indChar}'=${kn}.  anchor(M-pos of 'A')=${anchor}.  idx=(${kn}−${anchor}+${posP}) mod 26=${idx}  →  C='${numLetter(idx)}'`;
     } else if (variant === 'II') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(indChar)];
       const pn = letterNum(p);
       const idx = mod(posK + pn, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + pn, cls: 'hl' });
       current = `indicator '${indChar}' M-position=${posK}.  P='${p}' (${pn}, straight).  idx=(${posK}+${pn}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else if (variant === 'III') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(indChar)];
       const posP = Minv[letterNum(p)];
       const idx = mod(posK + posP, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `indicator '${indChar}' M-position=${posK}.  P='${p}' M-position=${posP}.  idx=(${posK}+${posP}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else {
       const { M1, M1inv, M2, M2inv } = state;
       const posP1 = M1inv[letterNum(p)];
       const posK2 = M2inv[letterNum(indChar)];
       const idx = mod(posK2 + posP1, 26);
-      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP1, cls: 'hl' });
       current = `P='${p}' M1-position=${posP1}.  indicator '${indChar}' M2-position=${posK2}.  idx=(${posK2}+${posP1}) mod 26=${idx}  →  C=M2[${idx}]='${M2[idx]}'`;
     }
     return { keyIds, current };
+  }
+
+  const QUAGMIRE_TABLEAU_NOTE = {
+    I: 'Tableau: row = indicator letter, columns = keyed plaintext alphabet M, cell = the straight ciphertext letter that row/column produces.',
+    II: 'Tableau: row = indicator letter, columns = straight plaintext alphabet, cell = the keyed (M) ciphertext letter that row/column produces.',
+    III: 'Tableau: row = indicator letter, columns = the keyed alphabet M (same one used for plaintext and ciphertext), cell = the resulting ciphertext letter.',
+    IV: 'Tableau: row = indicator letter, columns = keyed plaintext alphabet M1, cell = the keyed (M2) ciphertext letter that row/column produces.',
+  };
+
+  function renderQuagmireLikeTableau(container, state, registerHl, keySourceLabel) {
+    container.appendChild(el('div', 'viz-subheading', 'Tableau (every possible ' + keySourceLabel + ' letter)'));
+    if (state.variant === 'I') {
+      renderAlphabetTableau(container, state.M, ALPHABET.split(''), (K) => mod(letterNum(K) - state.anchor, 26), registerHl);
+    } else if (state.variant === 'II') {
+      renderAlphabetTableau(container, ALPHABET.split(''), state.M, (K) => state.Minv[letterNum(K)], registerHl);
+    } else if (state.variant === 'III') {
+      renderAlphabetTableau(container, state.M, state.M, (K) => state.Minv[letterNum(K)], registerHl);
+    } else {
+      renderAlphabetTableau(container, state.M1, state.M2, (K) => state.M2inv[letterNum(K)], registerHl);
+    }
+    container.appendChild(el('p', 'viz-note', QUAGMIRE_TABLEAU_NOTE[state.variant]));
   }
 
   function renderQuagmirePanel(container, state, registerHl) {
@@ -437,6 +491,7 @@
     }
     container.appendChild(el('div', 'viz-subheading', 'Indicator (cycle) word'));
     renderAlphabetStrip(container, ind.split(''), 'ind-', registerHl);
+    renderQuagmireLikeTableau(container, state, registerHl, 'indicator');
   }
 
   [['quagmire1', 'I'], ['quagmire2', 'II'], ['quagmire3', 'III'], ['quagmire4', 'IV']].forEach(([id, variant]) => {
@@ -478,35 +533,35 @@
     const { variant, pt, keystream } = state;
     const p = pt[i];
     const kch = keystream[i];
-    const keyIds = [{ id: 'kt-' + i, cls: 'hl' }];
+    const kn = letterNum(kch);
+    const keyIds = [{ id: 'kt-' + i, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }];
     let current;
     if (variant === 'I') {
       const { M, Minv, anchor } = state;
       const posP = Minv[letterNum(p)];
-      const kn = letterNum(kch);
       const idx = mod(kn - anchor + posP, 26);
-      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `M-position of P='${p}' is ${posP}.  running key '${kch}'=${kn}.  anchor(M-pos of 'A')=${anchor}.  idx=(${kn}−${anchor}+${posP}) mod 26=${idx}  →  C='${numLetter(idx)}'`;
     } else if (variant === 'II') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(kch)];
       const pn = letterNum(p);
       const idx = mod(posK + pn, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + pn, cls: 'hl' });
       current = `running key '${kch}' M-position=${posK}.  P='${p}' (${pn}, straight).  idx=(${posK}+${pn}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else if (variant === 'III') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(kch)];
       const posP = Minv[letterNum(p)];
       const idx = mod(posK + posP, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `running key '${kch}' M-position=${posK}.  P='${p}' M-position=${posP}.  idx=(${posK}+${posP}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else {
       const { M1, M1inv, M2, M2inv } = state;
       const posP1 = M1inv[letterNum(p)];
       const posK2 = M2inv[letterNum(kch)];
       const idx = mod(posK2 + posP1, 26);
-      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' });
+      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP1, cls: 'hl' });
       current = `P='${p}' M1-position=${posP1}.  running key '${kch}' M2-position=${posK2}.  idx=(${posK2}+${posP1}) mod 26=${idx}  →  C=M2[${idx}]='${M2[idx]}'`;
     }
     return { keyIds, current };
@@ -529,6 +584,7 @@
     }
     container.appendChild(el('div', 'viz-subheading', 'Running key text'));
     renderAlphabetStrip(container, state.keystream, 'kt-', registerHl);
+    renderQuagmireLikeTableau(container, state, registerHl, 'running key');
   }
 
   [['running_key1', 'I'], ['running_key2', 'II'], ['running_key3', 'III'], ['running_key4', 'IV']].forEach(([id, variant]) => {
