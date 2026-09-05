@@ -58,6 +58,19 @@
     return true;
   }
 
+  // Up to `maxLen` characters of the text immediately preceding word index
+  // `start` in the same corpus (no spaces, not necessarily word-aligned -
+  // key text doesn't need whole words, only the plaintext selection does).
+  // Used by ciphers whose key is meant to be a contiguous continuation of
+  // the same source passage (e.g. "Running Key ACA") rather than unrelated
+  // text; returns a shorter (possibly empty) string if the selection starts
+  // too close to the beginning of its corpus file.
+  function precedingTextFor(words, start, maxLen) {
+    let acc = '';
+    for (let j = start - 1; j >= 0 && acc.length < maxLen; j--) acc = words[j] + acc;
+    return acc.length > maxLen ? acc.slice(acc.length - maxLen) : acc;
+  }
+
   // ---------------------------------------------------------------------
   // Pick a random contiguous run of whole words (from a random corpus file,
   // starting at a random word position) whose combined length exactly
@@ -82,7 +95,8 @@
         if (sum === targetLength) {
           const noSpaces = chosen.join('');
           if (passesEntropyFilter(noSpaces)) {
-            return { words: chosen, corpusFile: src.file, startIndex: start };
+            const precedingText = precedingTextFor(words, start, targetLength);
+            return { words: chosen, corpusFile: src.file, startIndex: start, precedingText };
           }
           break;
         }
@@ -116,7 +130,7 @@
         const ptNoSpaces = seq.words.join('');
         let key, values, ciphertext;
         try {
-          const rk = def.randomKey({ ptLength: ptNoSpaces.length });
+          const rk = def.randomKey({ ptLength: ptNoSpaces.length, precedingText: seq.precedingText });
           key = rk.key; values = rk.values;
           ciphertext = def.encrypt(ptNoSpaces, key);
         } catch (e) {

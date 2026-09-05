@@ -1,0 +1,66 @@
+Let's make a locally stored html+javascript tool that can generate thousands of cipher samples using a variety of corpora to draw plaintexts from.
+
+Find a few corpora online and sample a few hundred contemporary sources of text (wikipedia articles, ebooks, etc).
+Process the text samples into a normalized all-caps format, one word after another, with no punctuation, symbols, or digits (only the letters A-Z, with words separated by at most a single space).
+
+Store the text in text format in the "corpora" folder.
+
+The tool should have these features:
+
+- User can select from multiple cipher types.
+- When a cipher type is selected, the user can flip between two modes:
+1) Performing manual encryption and decryption
+2) Cipher generation mode
+- Encryption/decryption mode is pretty straightforward: The user supplies plaintext (for encryption), or ciphertext (for decryption), and key information (for both).
+- In cipher generation mode, user sets a target ciphertext length (Default is 97), and a quantity of ciphers.  We want to be able to support the random generation of possibly thousands of cipher examples.  When user sets length and quantity, the cipher generator goes through the following loop:
+1) Select a random corpora file
+2) Select a random sequence of words from the corpora file (via a random position within the sample) such that the length without spaces matches the target length and no word in the sequence has been truncated.  Also, do not select sequences that have low entropy for normal sequences of English words (e.g., sequences with a lot of weird repeating letters will be ignored).
+3) Select random key information that is appropriate for the selected cipher type.  If any keywords are needed, select them at random from the top 80% of the words in the included dictionary file: english_words__practicalcryptography_percentile_99.txt
+- When the loop is done, report the generated ciphers in a paginated table (with next/prev links and a direct page number selector).
+- Add the ability to export the ciphers in cvs format with the following columns: cipher type label, key information, ciphertext, plaintext without spaces, plaintext with spaces.
+
+Cipher types:
+- simple substitution
+- homophonic substitution
+- autokey
+- columnar transposition
+- double columnar transposition
+- rail fence
+- Myszkowski transposition
+- ADFGX
+- ADFGVX 
+- bifid
+- trifid
+- auto key
+- quagmire1
+- quagmire2
+- quagmire3
+- quagmire4
+- running key
+- vigenere
+- enigma
+- beaufort
+- porta
+- playfair
+- hill
+- scytale
+
+
+=========
+
+Add these new features to the cipher-generator:
+
+Add a "Visualizer" button to the top (next to "Encrypt/Decrypt" and "Generate Ciphers")
+
+When clicked, the page shows a built-in sample plaintext that is encrypted using the selected cipher type and built-in sample key information.
+Or, the user can supply their own plaintext (or ciphertext) and key information (similar to the UI in Encrypt/Decrypt mode).  
+If user supplies plaintext and key, the ciphertext is automatically determined.
+If user supplies ciphertext and key, the plaintext is automatically determined.
+
+When the user hovers over a plaintext letter, the corresponding ciphertext letter is highlighted (and vice versa).  Steps within the key information are also highlighted.  For example, the relevant entry in the substitution key for a substitution cipher is highlighted.  Or for Vigenere, the entry in the tabula recta is highlighted, and current keyword letter is highlighted.
+
+If the cipher process can be represented arithmetically, show the formula and its current values when the user hovers over a plaintext or ciphertext letter.  For example, show the modulo arithmetic for Vigenere: C(i) = P(i) + K(i) (mod 26), and current values when user hovers over plaintext or ciphertext letters.
+
+
+
+

@@ -349,47 +349,96 @@
     },
   });
 
+  // Straight-alphabet running key: C = P + K (mod 26), K = a long,
+  // non-repeating passage of text at least as long as the plaintext. Shared
+  // engine for the standalone "Running Key" cipher just below, and for the
+  // two running-key-plus-transposition ciphers further down. (See "Running
+  // Key I - IV" further below for the keyed-alphabet variants of this same
+  // running-key idea, mirroring Quagmire's four plain/cipher-alphabet
+  // combinations.)
+  function runningKeyStraightRandomKey(opts) {
+    const ptLen = (opts && opts.ptLength) || 97;
+    const corpora = global.CIPHERGEN_CORPORA || [];
+    for (let tries = 0; tries < 50; tries++) {
+      const src = randChoice(corpora);
+      if (src.text.length < ptLen + 2) continue;
+      const start = randInt(0, src.text.length - ptLen - 1);
+      let excerpt = src.text.substr(start, ptLen + 40).replace(/ /g, '');
+      if (excerpt.length >= ptLen) {
+        const keyText = excerpt.slice(0, ptLen);
+        return { key: { keyText, source: src.file, offset: start }, values: { keyText } };
+      }
+    }
+    // fallback: repeat a dictionary word to reach length
+    const w = pickDictionaryWord(4, 10);
+    let keyText = '';
+    while (keyText.length < ptLen) keyText += w;
+    keyText = keyText.slice(0, ptLen);
+    return { key: { keyText }, values: { keyText } };
+  }
+  function runningKeyStraightKeyFromValues(values) {
+    const k = onlyLetters(values.keyText);
+    validateLength(k, 'Key text');
+    return { keyText: k };
+  }
+  function runningKeyStraightKeyInfo(key) {
+    return `key=${key.keyText}${key.source ? ` (source=${key.source}@${key.offset})` : ''}`;
+  }
+  function runningKeyStraightEncrypt(pt, key) {
+    if (key.keyText.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
+    return pt.split('').map((ch, i) => numLetter(letterNum(ch) + letterNum(key.keyText[i]))).join('');
+  }
+  function runningKeyStraightDecrypt(ct, key) {
+    if (key.keyText.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
+    return ct.split('').map((ch, i) => numLetter(letterNum(ch) - letterNum(key.keyText[i]))).join('');
+  }
+
+  // Standalone Running Key: both plaintext and ciphertext alphabets are
+  // straight (unkeyed) A-Z - the one plain/cipher-alphabet combination
+  // Running Key I-IV below don't cover, since each of those keys at least
+  // one side. Also used as-is by the two running-key-plus-transposition
+  // ciphers further down.
   register({
     id: 'running_key',
     label: 'Running Key',
     fields: [{ name: 'keyText', label: 'Key text (letters only, at least as long as the plaintext)', type: 'textarea', placeholder: 'a long passage of key text...' }],
+    randomKey(opts) { return runningKeyStraightRandomKey(opts); },
+    keyFromValues(values) { return runningKeyStraightKeyFromValues(values); },
+    keyInfo(key) { return runningKeyStraightKeyInfo(key); },
+    encrypt(pt, key) { return runningKeyStraightEncrypt(pt, key); },
+    decrypt(ct, key) { return runningKeyStraightDecrypt(ct, key); },
+  });
+
+  // Running Key ACA: the ACA "Cryptogram" RUNNING KEY variant
+  // (cryptogram.org/downloads/aca.info/ciphers/RunningKey.pdf). A single
+  // passage is split in half; the first half is never transmitted and acts
+  // purely as the key for encrypting the second half (straight Vigenere -
+  // same encrypt/decrypt math as the standalone Running Key above). What
+  // makes this the ACA variant specifically (rather than just another
+  // "Running Key" with an unrelated key) is that the key is a genuine
+  // continuation of the same passage, not independent text - so during
+  // generation the key is sourced as the text immediately preceding the
+  // chosen plaintext in the same corpus source, falling back to an
+  // unrelated excerpt (like standalone Running Key) only when the
+  // plaintext was selected too close to the start of its source to have
+  // that much preceding text.
+  register({
+    id: 'running_key_aca',
+    label: 'Running Key ACA',
+    fields: [{ name: 'keyText', label: 'Key text (the other half of the passage, letters only, at least as long as the plaintext)', type: 'textarea', placeholder: 'the text that immediately precedes the plaintext...' }],
     randomKey(opts) {
       const ptLen = (opts && opts.ptLength) || 97;
-      const corpora = global.CIPHERGEN_CORPORA || [];
-      for (let tries = 0; tries < 50; tries++) {
-        const src = randChoice(corpora);
-        if (src.text.length < ptLen + 2) continue;
-        const start = randInt(0, src.text.length - ptLen - 1);
-        let excerpt = src.text.substr(start, ptLen + 40).replace(/ /g, '');
-        if (excerpt.length >= ptLen) {
-          const keyText = excerpt.slice(0, ptLen);
-          return { key: { keyText, source: src.file, offset: start }, values: { keyText } };
-        }
+      const preceding = (opts && opts.precedingText) || '';
+      if (preceding.length >= ptLen) {
+        const keyText = preceding.slice(preceding.length - ptLen);
+        return { key: { keyText }, values: { keyText } };
       }
-      // fallback: repeat a dictionary word to reach length
-      const w = pickDictionaryWord(4, 10);
-      let keyText = '';
-      while (keyText.length < ptLen) keyText += w;
-      keyText = keyText.slice(0, ptLen);
-      return { key: { keyText }, values: { keyText } };
+      return runningKeyStraightRandomKey(opts); // not enough adjacent context - fall back to an unrelated excerpt
     },
-    keyFromValues(values) {
-      const k = onlyLetters(values.keyText);
-      validateLength(k, 'Key text');
-      return { keyText: k };
-    },
-    keyInfo(key) {
-      const preview = key.keyText.length > 40 ? key.keyText.slice(0, 40) + '...' : key.keyText;
-      return `key=${preview}${key.source ? ` (source=${key.source}@${key.offset})` : ''}`;
-    },
-    encrypt(pt, key) {
-      if (key.keyText.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
-      return pt.split('').map((ch, i) => numLetter(letterNum(ch) + letterNum(key.keyText[i]))).join('');
-    },
-    decrypt(ct, key) {
-      if (key.keyText.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
-      return ct.split('').map((ch, i) => numLetter(letterNum(ch) - letterNum(key.keyText[i]))).join('');
-    },
+    keyFromValues(values) { return runningKeyStraightKeyFromValues(values); },
+    keyInfo(key) { return runningKeyStraightKeyInfo(key); },
+    encrypt(pt, key) { return runningKeyStraightEncrypt(pt, key); },
+    decrypt(ct, key) { return runningKeyStraightDecrypt(ct, key); },
   });
 
   // ---------------------------------------------------------------------
@@ -559,6 +608,177 @@
       return ct.split('').map((ch, i) => {
         const k = ind[i % ind.length];
         const idx = mod(M2inv[letterNum(ch)] - M2inv[letterNum(k)], 26);
+        return M1[idx];
+      }).join('');
+    },
+  });
+
+  // ---------------------------------------------------------------------
+  // Running Key I - IV
+  // Same four plain/cipher-alphabet combinations as Quagmire I-IV, but the
+  // short indicator word that cycles is replaced by a long, non-repeating
+  // running key text (at least as long as the plaintext) - one key letter
+  // per plaintext letter, sourced from a random corpus excerpt, same as the
+  // plain (straight-alphabet) running key mechanism above.
+  // ---------------------------------------------------------------------
+  function runningKeyVariantFields(withKeyword2) {
+    const f = [
+      { name: 'keyword1', label: withKeyword2 ? 'Keyword 1 (plaintext alphabet)' : 'Keyword', type: 'text', placeholder: 'e.g. KRYPTOS' },
+    ];
+    if (withKeyword2) f.push({ name: 'keyword2', label: 'Keyword 2 (ciphertext alphabet)', type: 'text', placeholder: 'e.g. ABSCISSA' });
+    f.push({ name: 'keyText', label: 'Running key text (letters only, at least as long as the plaintext)', type: 'textarea', placeholder: 'a long passage of key text...' });
+    return f;
+  }
+
+  function runningKeyVariantRandomKey(withKeyword2, opts) {
+    const words = withKeyword2 ? pickDistinctDictionaryWords(2, 5, 9) : [pickDictionaryWord(5, 9)];
+    const keyword1 = words[0];
+    const rk = runningKeyStraightRandomKey(opts);
+    const key = { keyword1, runningKey: rk.key };
+    const values = { keyword1, keyText: rk.values.keyText };
+    if (withKeyword2) { key.keyword2 = words[1]; values.keyword2 = words[1]; }
+    return { key, values };
+  }
+
+  function runningKeyVariantKeyFromValues(values, withKeyword2) {
+    const keyword1 = onlyLetters(values.keyword1);
+    validateLength(keyword1, withKeyword2 ? 'Keyword 1' : 'Keyword');
+    const key = { keyword1, runningKey: runningKeyStraightKeyFromValues({ keyText: values.keyText }) };
+    if (withKeyword2) {
+      const keyword2 = onlyLetters(values.keyword2);
+      validateLength(keyword2, 'Keyword 2');
+      key.keyword2 = keyword2;
+    }
+    return key;
+  }
+
+  // Running Key I: keyed plaintext alphabet, straight ciphertext alphabet.
+  register({
+    id: 'running_key1',
+    label: 'Running Key I',
+    fields: runningKeyVariantFields(false),
+    randomKey(opts) { return runningKeyVariantRandomKey(false, opts); },
+    keyFromValues(values) { return runningKeyVariantKeyFromValues(values, false); },
+    keyInfo(key) { return `keyword=${key.keyword1} ${runningKeyStraightKeyInfo(key.runningKey)}`; },
+    encrypt(pt, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      const anchor = Minv[0]; // position of 'A' within M
+      return pt.split('').map((ch, i) => {
+        const idx = mod(letterNum(kt[i]) - anchor + Minv[letterNum(ch)], 26);
+        return numLetter(idx);
+      }).join('');
+    },
+    decrypt(ct, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      const anchor = Minv[0];
+      return ct.split('').map((ch, i) => {
+        const idx = mod(letterNum(ch) - letterNum(kt[i]) + anchor, 26);
+        return M[idx];
+      }).join('');
+    },
+  });
+
+  // Running Key II: straight plaintext alphabet, keyed ciphertext alphabet.
+  register({
+    id: 'running_key2',
+    label: 'Running Key II',
+    fields: runningKeyVariantFields(false),
+    randomKey(opts) { return runningKeyVariantRandomKey(false, opts); },
+    keyFromValues(values) { return runningKeyVariantKeyFromValues(values, false); },
+    keyInfo(key) { return `keyword=${key.keyword1} ${runningKeyStraightKeyInfo(key.runningKey)}`; },
+    encrypt(pt, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      return pt.split('').map((ch, i) => {
+        const idx = mod(Minv[letterNum(kt[i])] + letterNum(ch), 26);
+        return M[idx];
+      }).join('');
+    },
+    decrypt(ct, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      return ct.split('').map((ch, i) => {
+        const idx = mod(Minv[letterNum(ch)] - Minv[letterNum(kt[i])], 26);
+        return numLetter(idx);
+      }).join('');
+    },
+  });
+
+  // Running Key III: same keyed alphabet used for both plaintext and ciphertext.
+  register({
+    id: 'running_key3',
+    label: 'Running Key III',
+    fields: runningKeyVariantFields(false),
+    randomKey(opts) { return runningKeyVariantRandomKey(false, opts); },
+    keyFromValues(values) { return runningKeyVariantKeyFromValues(values, false); },
+    keyInfo(key) { return `keyword=${key.keyword1} ${runningKeyStraightKeyInfo(key.runningKey)}`; },
+    encrypt(pt, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      return pt.split('').map((ch, i) => {
+        const idx = mod(Minv[letterNum(kt[i])] + Minv[letterNum(ch)], 26);
+        return M[idx];
+      }).join('');
+    },
+    decrypt(ct, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
+      const M = keyedAlphabet26(key.keyword1);
+      const Minv = new Array(26);
+      for (let i = 0; i < 26; i++) Minv[letterNum(M[i])] = i;
+      return ct.split('').map((ch, i) => {
+        const idx = mod(Minv[letterNum(ch)] - Minv[letterNum(kt[i])], 26);
+        return M[idx];
+      }).join('');
+    },
+  });
+
+  // Running Key IV: independent keyed alphabets for plaintext and ciphertext.
+  register({
+    id: 'running_key4',
+    label: 'Running Key IV',
+    fields: runningKeyVariantFields(true),
+    randomKey(opts) { return runningKeyVariantRandomKey(true, opts); },
+    keyFromValues(values) { return runningKeyVariantKeyFromValues(values, true); },
+    keyInfo(key) { return `keyword1=${key.keyword1} keyword2=${key.keyword2} ${runningKeyStraightKeyInfo(key.runningKey)}`; },
+    encrypt(pt, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < pt.length) throw new Error('Running key text is shorter than the plaintext.');
+      const M1 = keyedAlphabet26(key.keyword1);
+      const M2 = keyedAlphabet26(key.keyword2);
+      const M1inv = new Array(26); for (let i = 0; i < 26; i++) M1inv[letterNum(M1[i])] = i;
+      const M2inv = new Array(26); for (let i = 0; i < 26; i++) M2inv[letterNum(M2[i])] = i;
+      return pt.split('').map((ch, i) => {
+        const idx = mod(M2inv[letterNum(kt[i])] + M1inv[letterNum(ch)], 26);
+        return M2[idx];
+      }).join('');
+    },
+    decrypt(ct, key) {
+      const kt = key.runningKey.keyText;
+      if (kt.length < ct.length) throw new Error('Running key text is shorter than the ciphertext.');
+      const M1 = keyedAlphabet26(key.keyword1);
+      const M2 = keyedAlphabet26(key.keyword2);
+      const M1inv = new Array(26); for (let i = 0; i < 26; i++) M1inv[letterNum(M1[i])] = i;
+      const M2inv = new Array(26); for (let i = 0; i < 26; i++) M2inv[letterNum(M2[i])] = i;
+      return ct.split('').map((ch, i) => {
+        const idx = mod(M2inv[letterNum(ch)] - M2inv[letterNum(kt[i])], 26);
         return M1[idx];
       }).join('');
     },
@@ -874,7 +1094,7 @@
   }
 
   function randomRunningKeyTranspositionKey(opts) {
-    const rk = CIPHERS.running_key.randomKey(opts);
+    const rk = runningKeyStraightRandomKey(opts);
     const transposition = randomTranspositionKey();
     return {
       key: { runningKey: rk.key, transposition },
@@ -901,21 +1121,21 @@
     fields: [RUNNING_KEY_TEXT_FIELD, TRANS_KEY_FIELD],
     randomKey(opts) { return randomRunningKeyTranspositionKey(opts); },
     keyFromValues(values) {
-      const runningKey = CIPHERS.running_key.keyFromValues({ keyText: values.keyText });
+      const runningKey = runningKeyStraightKeyFromValues({ keyText: values.keyText });
       const transposition = parseTranspositionKey(values.transKey);
       return { runningKey, transposition };
     },
     keyInfo(key) {
-      return `${CIPHERS.running_key.keyInfo(key.runningKey)} transposition=${transpositionKeyInfo(key.transposition)}`;
+      return `${runningKeyStraightKeyInfo(key.runningKey)} transposition=${transpositionKeyInfo(key.transposition)}`;
     },
     // Running key first, then transpose the result.
     encrypt(pt, key) {
-      const innerCt = CIPHERS.running_key.encrypt(pt, key.runningKey);
+      const innerCt = runningKeyStraightEncrypt(pt, key.runningKey);
       return columnarEncryptRaw(innerCt, transpositionOrder(key.transposition));
     },
     decrypt(ct, key) {
       const innerCt = columnarDecryptRaw(ct, transpositionOrder(key.transposition));
-      return CIPHERS.running_key.decrypt(innerCt, key.runningKey);
+      return runningKeyStraightDecrypt(innerCt, key.runningKey);
     },
   });
 
@@ -926,19 +1146,19 @@
     randomKey(opts) { return randomRunningKeyTranspositionKey(opts); },
     keyFromValues(values) {
       const transposition = parseTranspositionKey(values.transKey);
-      const runningKey = CIPHERS.running_key.keyFromValues({ keyText: values.keyText });
+      const runningKey = runningKeyStraightKeyFromValues({ keyText: values.keyText });
       return { transposition, runningKey };
     },
     keyInfo(key) {
-      return `transposition=${transpositionKeyInfo(key.transposition)} ${CIPHERS.running_key.keyInfo(key.runningKey)}`;
+      return `transposition=${transpositionKeyInfo(key.transposition)} ${runningKeyStraightKeyInfo(key.runningKey)}`;
     },
     // Transpose first, then apply the running key to the transposed text.
     encrypt(pt, key) {
       const transposed = columnarEncryptRaw(pt, transpositionOrder(key.transposition));
-      return CIPHERS.running_key.encrypt(transposed, key.runningKey);
+      return runningKeyStraightEncrypt(transposed, key.runningKey);
     },
     decrypt(ct, key) {
-      const transposed = CIPHERS.running_key.decrypt(ct, key.runningKey);
+      const transposed = runningKeyStraightDecrypt(ct, key.runningKey);
       return columnarDecryptRaw(transposed, transpositionOrder(key.transposition));
     },
   });

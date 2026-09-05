@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polyalphabetic Alphabet-Keying Coverage</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --border: #ddd8cf;
+    --text: #26241f;
+    --text-muted: #6b6558;
+    --accent: #8a5a3b;
+    --accent-contrast: #fffaf3;
+    --table-stripe: #faf8f3;
+    --table-head: #efe9dd;
+    --ok-bg: #e8f0e3;
+    --ok-text: #3c6b2e;
+    --gap-bg: #fbe6e2;
+    --gap-text: #8c2f22;
+    --mono-bg: #f1efe8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1a17;
+      --panel: #242220;
+      --border: #3a362f;
+      --text: #ece7db;
+      --text-muted: #a49b89;
+      --accent: #c98b5e;
+      --accent-contrast: #221a12;
+      --table-stripe: #201e1a;
+      --table-head: #2c2924;
+      --ok-bg: #223420;
+      --ok-text: #8fce7c;
+      --gap-bg: #3a1f1a;
+      --gap-text: #f0a493;
+      --mono-bg: #171512;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-muted); margin: 0 0 28px; }
+  h2 { font-size: 1.05rem; margin: 36px 0 10px; }
+  p { margin: 0 0 14px; }
+  code, .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; background: var(--mono-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 4px 0 8px; }
+  thead th { text-align: left; background: var(--table-head); padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(even) { background: var(--table-stripe); }
+  td.mech { font-weight: 600; white-space: nowrap; }
+  .cell { text-align: center; }
+  .ok { display: inline-block; padding: 2px 9px; border-radius: 5px; background: var(--ok-bg); color: var(--ok-text); font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.85em; font-weight: 600; }
+  .gap { display: inline-block; padding: 2px 9px; border-radius: 5px; background: var(--gap-bg); color: var(--gap-text); font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.85em; font-weight: 600; }
+  ol, ul { padding-left: 22px; }
+  li { margin-bottom: 10px; }
+  .footer-note { color: var(--text-muted); font-size: 0.88rem; margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Polyalphabetic Alphabet-Keying Coverage</h1>
+  <p class="subtitle">Which of the Cipher Generator's polyalphabetic cipher families support a keyed plaintext alphabet, a keyed ciphertext alphabet, or both — and which combinations are still gaps.</p>
+
+  <div class="panel">
+    <p>This covers every cipher built around a per-position, key-driven substitution formula — some plaintext alphabet
+    + some ciphertext alphabet + a key stream — as distinct from transposition, fractionation (Bifid/Trifid/ADFGX/ADFGVX),
+    Playfair, Hill, or Enigma, where "keyed plaintext/ciphertext alphabet" isn't a meaningful axis in the same way.</p>
+    <p>There are six such base mechanisms in the generator, distinguished by <em>how the key stream is produced</em>.
+    Each can in principle be run against four alphabet configurations: both straight, keyed plaintext only, keyed
+    ciphertext only, or keyed on both sides (with one shared keyword, or two independent keywords).</p>
+  </div>
+
+  <h2>Coverage matrix</h2>
+  <div class="panel" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Key-stream mechanism</th>
+          <th class="cell">Straight/Straight</th>
+          <th class="cell">Keyed PT only</th>
+          <th class="cell">Keyed CT only</th>
+          <th class="cell">Keyed both (same kw)</th>
+          <th class="cell">Keyed both (diff kw)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mech">Short, cycling indicator word</td>
+          <td class="cell"><span class="ok">vigenere</span></td>
+          <td class="cell"><span class="ok">quagmire1</span></td>
+          <td class="cell"><span class="ok">quagmire2</span></td>
+          <td class="cell"><span class="ok">quagmire3</span></td>
+          <td class="cell"><span class="ok">quagmire4</span></td>
+        </tr>
+        <tr>
+          <td class="mech">Long running key, unrelated text</td>
+          <td class="cell"><span class="ok">running_key</span></td>
+          <td class="cell"><span class="ok">running_key1</span></td>
+          <td class="cell"><span class="ok">running_key2</span></td>
+          <td class="cell"><span class="ok">running_key3</span></td>
+          <td class="cell"><span class="ok">running_key4</span></td>
+        </tr>
+        <tr>
+          <td class="mech">Long running key, ACA (adjacent / self-derived text)</td>
+          <td class="cell"><span class="ok">running_key_aca</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+        </tr>
+        <tr>
+          <td class="mech">Beaufort formula (C = K − P)</td>
+          <td class="cell"><span class="ok">beaufort</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+        </tr>
+        <tr>
+          <td class="mech">Porta (13 reciprocal groups)</td>
+          <td class="cell"><span class="ok">porta</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+        </tr>
+        <tr>
+          <td class="mech">Autokey (primer + plaintext extends the key)</td>
+          <td class="cell"><span class="ok">autokey</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+          <td class="cell"><span class="gap">gap</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Already fully covered</h2>
+  <div class="panel">
+    <p>The <strong>cycling-indicator</strong> mechanism (Vigenère / Quagmire I–IV) and the <strong>unrelated
+    running-key</strong> mechanism (Running Key / Running Key I–IV) are both complete: every one of the four
+    alphabet combinations already exists for each.</p>
+  </div>
+
+  <h2>Gaps — straight/straight only, no keyed-alphabet siblings</h2>
+  <div class="panel">
+    <ol>
+      <li><strong>Running Key ACA.</strong> The variant just added has no keyed-alphabet siblings yet. A
+        "Running Key ACA I/II/III/IV" would apply Quagmire's four alphabet combinations but source the key as the
+        adjacent, same-source text (like the base ACA variant does) rather than a cycling indicator or an unrelated
+        running key. Same shape as <code>running_key1-4</code>, just swapping the key-sourcing.</li>
+      <li><strong>Autokey.</strong> A strong candidate: the extending key (primer, then plaintext) is exactly the
+        kind of key stream Quagmire / Running Key I–IV already generalize over. "Autokey I/II/III/IV" is
+        well-defined and currently missing entirely.</li>
+      <li><strong>Beaufort.</strong> Self-reciprocal (C = K − P), currently straight/straight only. Keying either or
+        both alphabets is mathematically well-defined — mirrors the Quagmire derivation with subtraction instead of
+        addition — and currently has no representation.</li>
+      <li><strong>Porta.</strong> Its reciprocal 13-group construction inherently ties the plaintext and ciphertext
+        alphabets together (built from <em>one</em> alphabet split into pairs), so the natural single extension is a
+        Quagmire-III-style "one keyword keys both sides" Porta. Asymmetric keyed-PT-only or keyed-CT-only variants
+        don't fit Porta's construction as cleanly and would be more of a stretch.</li>
+    </ol>
+  </div>
+
+  <div class="footer-note">
+    <p><strong>Caveat on authenticity:</strong> unlike Running Key I–IV (directly modeled on the well-established
+    Quagmire structure) and Running Key ACA (a real, named ACA cipher, sourced from
+    <a href="https://www.cryptogram.org/downloads/aca.info/ciphers/RunningKey.pdf">cryptogram.org's reference PDF</a>),
+    there's no confirmation that "Beaufort I–IV," "Autokey I–IV," or a keyed Porta are historically-attested named
+    ciphers in the ACA canon. They're mathematically clean, well-defined extensions by analogy — not verified against
+    an external reference the way everything else in this tool has been. Worth flagging if historical fidelity
+    matters before building any of them.</p>
+    <p>Generated for the <code>cipher-generator</code> tool, alongside the addition of Running Key ACA.</p>
+  </div>
+</div>
+</body>
+</html>

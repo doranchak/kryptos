@@ -16,6 +16,7 @@ function load(relPath) {
 load('js/data/dictionary_data.js');
 load('js/data/corpora_data.js');
 load('js/ciphers.js');
+load('js/generator.js');
 
 const { CIPHERS, onlyLetters } = global.CipherLib;
 
@@ -167,6 +168,78 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   const ct = CIPHERS.quagmire4.encrypt(pt, key);
   assertEq(ct, expectedCt, 'Quagmire IV (ACA reference)');
   assertEq(CIPHERS.quagmire4.decrypt(ct, key), pt, 'Quagmire IV decrypt round-trip');
+}
+
+// --- Running Key ACA (official ACA "Cryptogram" worked example) ---
+{
+  const key = { keyText: 'THISCIPHERCANBEUSEDW' };
+  const pt = 'ITHANYOFTHEPERIODICS';
+  const expectedCt = 'BAPSPGDMXYGPRSMIVMFO';
+  const ct = CIPHERS.running_key_aca.encrypt(pt, key);
+  assertEq(ct, expectedCt, 'Running Key ACA (official ACA reference example)');
+  assertEq(CIPHERS.running_key_aca.decrypt(ct, key), pt, 'Running Key ACA decrypt round-trip');
+}
+
+// --- Running Key ACA randomKey: uses adjacent preceding text when given, falls back otherwise ---
+{
+  const withAdjacent = CIPHERS.running_key_aca.randomKey({ ptLength: 5, precedingText: 'XXXHELLO' });
+  assertEq(withAdjacent.key.keyText, 'HELLO', 'Running Key ACA randomKey uses the last N chars of precedingText');
+
+  const withShortAdjacent = CIPHERS.running_key_aca.randomKey({ ptLength: 10, precedingText: 'AB' });
+  assertTrue(withShortAdjacent.key.keyText.length >= 10, 'Running Key ACA randomKey falls back to a full-length key when precedingText is too short');
+}
+
+// --- generator.js: precedingText returned by pickPlaintextSequence is exactly
+// the (no-spaces) text immediately before the chosen plaintext in the same
+// corpus source, i.e. a genuine continuation, not unrelated text. ---
+{
+  const G = global.CipherGenerator;
+  let checked = 0;
+  for (let i = 0; i < 30 && checked < 8; i++) {
+    const seq = G.pickPlaintextSequence(60, 4000);
+    if (!seq) continue;
+    const src = (global.CIPHERGEN_CORPORA || []).find((c) => c.file === seq.corpusFile);
+    const words = src.text.split(' ').filter(Boolean);
+    const expected = words.slice(0, seq.startIndex).join('').slice(-60);
+    checked++;
+    assertEq(seq.precedingText, expected, 'precedingText is exactly the text immediately before the chosen plaintext in the same source');
+  }
+  assertTrue(checked > 0, 'precedingText coverage check ran at least once');
+}
+
+// --- Running Key I-IV cross-checked against the already-verified Quagmire
+// I-IV vectors above: for a plaintext no longer than the indicator word,
+// `indicator[i % indicator.length] === indicator[i]` for every position, so
+// Running Key I-IV (which use the running key text directly at position i,
+// with no cycling) must reproduce an exact prefix of the matching Quagmire
+// ciphertext when the running key text equals that indicator word. This
+// isn't numerical luck - the two implementations execute the identical
+// per-position formula on this input, differing only in how far K(i) can be
+// read from. ---
+{
+  // Running Key I <-> Quagmire I (ACA reference), truncated to indicator length (6).
+  let key = { keyword1: 'SPRINGFEVER', runningKey: { keyText: 'FLOWER' } };
+  assertEq(CIPHERS.running_key1.encrypt('THEQUA', key), 'QPMGQR', 'Running Key I matches Quagmire I prefix');
+  assertEq(CIPHERS.running_key1.decrypt('QPMGQR', key), 'THEQUA', 'Running Key I decrypt round-trip');
+
+  // Running Key II <-> Quagmire II (ACA reference), truncated to indicator length (6).
+  key = { keyword1: 'SPRINGFEVER', runningKey: { keyText: 'FLOWER' } };
+  assertEq(CIPHERS.running_key2.encrypt('INTHEQ', key), 'JICICO', 'Running Key II matches Quagmire II prefix');
+  assertEq(CIPHERS.running_key2.decrypt('JICICO', key), 'INTHEQ', 'Running Key II decrypt round-trip');
+
+  // Running Key III <-> Quagmire III (ACA reference), truncated to indicator length (7).
+  key = { keyword1: 'AUTOMOBILE', runningKey: { keyText: 'HIGHWAY' } };
+  assertEq(CIPHERS.running_key3.encrypt('THESAME', key), 'KRSLWMI', 'Running Key III matches Quagmire III prefix (ACA)');
+  assertEq(CIPHERS.running_key3.decrypt('KRSLWMI', key), 'THESAME', 'Running Key III decrypt round-trip');
+
+  // Running Key III <-> Quagmire III via real Kryptos K1, truncated to indicator length (10).
+  key = { keyword1: 'KRYPTOS', runningKey: { keyText: 'PALIMPSEST' } };
+  assertEq(CIPHERS.running_key3.encrypt('BETWEENSUB', key), 'EMUFPHZLRF', 'Running Key III matches Quagmire III prefix (Kryptos K1)');
+
+  // Running Key IV <-> Quagmire IV (ACA reference), truncated to indicator length (5).
+  key = { keyword1: 'SENSORY', keyword2: 'PERCEPTION', runningKey: { keyText: 'EXTRA' } };
+  assertEq(CIPHERS.running_key4.encrypt('THISO', key), 'VBMRF', 'Running Key IV matches Quagmire IV prefix');
+  assertEq(CIPHERS.running_key4.decrypt('VBMRF', key), 'THISO', 'Running Key IV decrypt round-trip');
 }
 
 // --- Running Key + Transposition / Transposition + Running Key: hand-worked vectors ---

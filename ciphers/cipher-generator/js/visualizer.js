@@ -284,13 +284,14 @@
     },
   };
 
-  // ---- Vigenere-family (vigenere, beaufort, porta, autokey, running_key) ----
+  // ---- Vigenere-family (vigenere, beaufort, porta, autokey, running_key, running_key_aca) ----
   const VIG_FORMULA = {
     vigenere: 'C(i) = P(i) + K(i)   (mod 26)',
     beaufort: 'C(i) = K(i) − P(i)   (mod 26)',
     porta: 'g = ⌊K(i)/2⌋;  C(i) = 13+((P(i)+g) mod 13) if P(i)<13, else (P(i)−13−g) mod 13',
     autokey: 'C(i) = P(i) + K(i)   (mod 26),  K = primer, then the plaintext itself',
     running_key: 'C(i) = P(i) + K(i)   (mod 26),  K = running key text',
+    running_key_aca: 'C(i) = P(i) + K(i)   (mod 26),  K = the other half of the same passage (never transmitted)',
   };
 
   function buildVigenereFamily(kind) {
@@ -298,7 +299,7 @@
       const ptLen = pt.length;
       let keystream;
       if (kind === 'autokey') keystream = Array.from({ length: ptLen }, (_, i) => (i < key.primer.length ? key.primer[i] : pt[i - key.primer.length]));
-      else if (kind === 'running_key') keystream = key.keyText.slice(0, ptLen).split('');
+      else if (kind === 'running_key' || kind === 'running_key_aca') keystream = key.keyText.slice(0, ptLen).split('');
       else keystream = Array.from({ length: ptLen }, (_, i) => key.keyword[i % key.keyword.length]);
       return { kind, key, pt, ct, ptLen, keystream };
     };
@@ -324,7 +325,7 @@
     let extraPt;
     if (kind === 'vigenere' || kind === 'beaufort' || kind === 'porta') keyIds.push({ id: 'kwpos-' + (i % key.keyword.length), cls: 'hl' });
     else if (kind === 'autokey') { if (i < key.primer.length) keyIds.push({ id: 'primerpos-' + i, cls: 'hl' }); else extraPt = [i - key.primer.length]; }
-    else if (kind === 'running_key') keyIds.push({ id: 'ktpos-' + i, cls: 'hl' });
+    else if (kind === 'running_key' || kind === 'running_key_aca') keyIds.push({ id: 'ktpos-' + i, cls: 'hl' });
     const result = { keyIds, current };
     if (extraPt) result.extraPt = extraPt;
     return result;
@@ -338,8 +339,8 @@
     } else if (kind === 'autokey') {
       container.appendChild(el('div', 'viz-subheading', 'Primer (then continues with the plaintext itself)'));
       renderAlphabetStrip(container, key.primer.split(''), 'primerpos-', registerHl);
-    } else if (kind === 'running_key') {
-      container.appendChild(el('div', 'viz-subheading', 'Key text'));
+    } else if (kind === 'running_key' || kind === 'running_key_aca') {
+      container.appendChild(el('div', 'viz-subheading', kind === 'running_key_aca' ? 'Key text (the other half of the same passage)' : 'Key text'));
       renderAlphabetStrip(container, key.keyText.slice(0, ptLen).split(''), 'ktpos-', registerHl);
     }
     if (kind === 'porta') {
@@ -351,7 +352,7 @@
     }
   }
 
-  ['vigenere', 'beaufort', 'porta', 'autokey', 'running_key'].forEach((kind) => {
+  ['vigenere', 'beaufort', 'porta', 'autokey', 'running_key', 'running_key_aca'].forEach((kind) => {
     ADAPTERS[kind] = Object.assign(
       { build: buildVigenereFamily(kind), renderKeyPanel: renderVigenereFamilyPanel, formulaTemplate: VIG_FORMULA[kind] },
       identityHooks(vigenereFamilyHoverAt)
@@ -442,6 +443,98 @@
     ADAPTERS[id] = Object.assign(
       { build: buildQuagmire(variant), renderKeyPanel: renderQuagmirePanel, formulaTemplate: QUAGMIRE_FORMULA[variant] },
       identityHooks(quagmireHoverAt)
+    );
+  });
+
+  // ---- Running Key I - IV ----
+  // Same four plain/cipher-alphabet combinations as Quagmire I-IV above, but
+  // keyed per-position directly by a running key text (state.keystream[i])
+  // instead of a cycling indicator word (ind[i % ind.length]) - mirrors
+  // buildQuagmire/quagmireHoverAt/renderQuagmirePanel with that one
+  // difference, kept as a separate copy (rather than sharing code) so this
+  // never risks the already cross-checked Quagmire adapter above.
+  const RUNNING_KEY_FORMULA = {
+    I: "idx = (K(i) − anchor + M⁻¹[P]) mod 26;  C = straight[idx]   (M = keyed plaintext alphabet, anchor = M-position of 'A', K(i) = running key letter at position i)",
+    II: 'idx = (M⁻¹[K(i)] + P) mod 26;  C = M[idx]   (M = keyed ciphertext alphabet, K(i) = running key letter at position i)',
+    III: 'idx = (M⁻¹[K(i)] + M⁻¹[P]) mod 26;  C = M[idx]   (M = keyed alphabet, used for both plaintext and ciphertext; K(i) = running key letter at position i)',
+    IV: 'idx = (M2⁻¹[K(i)] + M1⁻¹[P]) mod 26;  C = M2[idx]   (K(i) = running key letter at position i)',
+  };
+
+  function buildRunningKeyVariant(variant) {
+    return function build(pt, ct, key) {
+      const state = { variant, key, pt, ct, keystream: key.runningKey.keyText.slice(0, pt.length).split('') };
+      if (variant === 'IV') {
+        state.M1 = keyedAlphabet26(key.keyword1).split(''); state.M1inv = invArr(state.M1);
+        state.M2 = keyedAlphabet26(key.keyword2).split(''); state.M2inv = invArr(state.M2);
+      } else {
+        state.M = keyedAlphabet26(key.keyword1).split(''); state.Minv = invArr(state.M);
+        if (variant === 'I') state.anchor = state.Minv[0];
+      }
+      return state;
+    };
+  }
+
+  function runningKeyVariantHoverAt(state, i) {
+    const { variant, pt, keystream } = state;
+    const p = pt[i];
+    const kch = keystream[i];
+    const keyIds = [{ id: 'kt-' + i, cls: 'hl' }];
+    let current;
+    if (variant === 'I') {
+      const { M, Minv, anchor } = state;
+      const posP = Minv[letterNum(p)];
+      const kn = letterNum(kch);
+      const idx = mod(kn - anchor + posP, 26);
+      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' });
+      current = `M-position of P='${p}' is ${posP}.  running key '${kch}'=${kn}.  anchor(M-pos of 'A')=${anchor}.  idx=(${kn}−${anchor}+${posP}) mod 26=${idx}  →  C='${numLetter(idx)}'`;
+    } else if (variant === 'II') {
+      const { M, Minv } = state;
+      const posK = Minv[letterNum(kch)];
+      const pn = letterNum(p);
+      const idx = mod(posK + pn, 26);
+      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' });
+      current = `running key '${kch}' M-position=${posK}.  P='${p}' (${pn}, straight).  idx=(${posK}+${pn}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
+    } else if (variant === 'III') {
+      const { M, Minv } = state;
+      const posK = Minv[letterNum(kch)];
+      const posP = Minv[letterNum(p)];
+      const idx = mod(posK + posP, 26);
+      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' });
+      current = `running key '${kch}' M-position=${posK}.  P='${p}' M-position=${posP}.  idx=(${posK}+${posP}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
+    } else {
+      const { M1, M1inv, M2, M2inv } = state;
+      const posP1 = M1inv[letterNum(p)];
+      const posK2 = M2inv[letterNum(kch)];
+      const idx = mod(posK2 + posP1, 26);
+      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' });
+      current = `P='${p}' M1-position=${posP1}.  running key '${kch}' M2-position=${posK2}.  idx=(${posK2}+${posP1}) mod 26=${idx}  →  C=M2[${idx}]='${M2[idx]}'`;
+    }
+    return { keyIds, current };
+  }
+
+  function renderRunningKeyVariantPanel(container, state, registerHl) {
+    if (state.variant === 'IV') {
+      container.appendChild(el('div', 'viz-subheading', 'Keyed alphabet M1 (plaintext, from keyword 1)'));
+      renderAlphabetStrip(container, state.M1, 'M1-', registerHl);
+      container.appendChild(el('div', 'viz-subheading', 'Keyed alphabet M2 (ciphertext, from keyword 2)'));
+      renderAlphabetStrip(container, state.M2, 'M2-', registerHl);
+    } else if (state.variant === 'III') {
+      container.appendChild(el('div', 'viz-subheading', 'Keyed alphabet M (used for both plaintext and ciphertext)'));
+      renderAlphabetStrip(container, state.M, 'M-', registerHl);
+    } else {
+      container.appendChild(el('div', 'viz-subheading', state.variant === 'I' ? 'Keyed alphabet M (plaintext)' : 'Keyed alphabet M (ciphertext)'));
+      renderAlphabetStrip(container, state.M, 'M-', registerHl);
+      container.appendChild(el('div', 'viz-subheading', state.variant === 'I' ? 'Straight alphabet (ciphertext)' : 'Straight alphabet (plaintext)'));
+      renderAlphabetStrip(container, ALPHABET.split(''), 'S-', registerHl);
+    }
+    container.appendChild(el('div', 'viz-subheading', 'Running key text'));
+    renderAlphabetStrip(container, state.keystream, 'kt-', registerHl);
+  }
+
+  [['running_key1', 'I'], ['running_key2', 'II'], ['running_key3', 'III'], ['running_key4', 'IV']].forEach(([id, variant]) => {
+    ADAPTERS[id] = Object.assign(
+      { build: buildRunningKeyVariant(variant), renderKeyPanel: renderRunningKeyVariantPanel, formulaTemplate: RUNNING_KEY_FORMULA[variant] },
+      identityHooks(runningKeyVariantHoverAt)
     );
   });
 
@@ -967,6 +1060,11 @@
     quagmire3: { values: { keyword1: 'KRYPTOS', indicator: 'PALIMPSEST' } },
     quagmire4: { values: { keyword1: 'KRYPTOS', keyword2: 'ABSCISSA', indicator: 'PALIMPSEST' } },
     running_key: { values: { keyText: RUNNING_KEY_SAMPLE } },
+    running_key_aca: { values: { keyText: RUNNING_KEY_SAMPLE } },
+    running_key1: { values: { keyword1: 'KRYPTOS', keyText: RUNNING_KEY_SAMPLE } },
+    running_key2: { values: { keyword1: 'ABSCISSA', keyText: RUNNING_KEY_SAMPLE } },
+    running_key3: { values: { keyword1: 'KRYPTOS', keyText: RUNNING_KEY_SAMPLE } },
+    running_key4: { values: { keyword1: 'KRYPTOS', keyword2: 'ABSCISSA', keyText: RUNNING_KEY_SAMPLE } },
     running_key_transposition: { values: { keyText: RUNNING_KEY_SAMPLE, transKey: 'ZEBRAS' } },
     transposition_running_key: { values: { transKey: '3,1,4,2', keyText: RUNNING_KEY_SAMPLE } },
     vigenere: { values: { keyword: 'PALIMPSEST' } },
