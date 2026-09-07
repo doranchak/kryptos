@@ -241,6 +241,86 @@
   });
 
   // ---------------------------------------------------------------------
+  // Chaocipher (John F. Byrne). Two 26-letter "disks" - a left (ciphertext)
+  // and right (plaintext) alphabet - that dynamically permute after every
+  // single letter, so the effective substitution never repeats. Algorithm
+  // verified letter-for-letter against a dcode.gr-generated test vector (see
+  // scripts/test_ciphers.js): to encipher, find the plaintext letter's index
+  // i in RIGHT, output LEFT[i], then permute both disks:
+  //   LEFT:  rotate so index i is at position 0, remove position 1, reinsert
+  //          it at position 13.
+  //   RIGHT: rotate so index i+1 is at position 0 (one extra step vs LEFT -
+  //          this asymmetry is what makes the cipher self-decrypting),
+  //          remove position 2, reinsert it at position 13.
+  // Deciphering is the mirror image: find the ciphertext letter's index in
+  // LEFT, output RIGHT[i], then apply the identical permutation using that i.
+  // ---------------------------------------------------------------------
+  function chaoRotate(arr, k) {
+    const n = arr.length;
+    k = mod(k, n);
+    return arr.slice(k).concat(arr.slice(0, k));
+  }
+  function chaoRemoveInsert(arr, removePos, insertPos) {
+    const a = arr.slice();
+    const letter = a.splice(removePos, 1)[0];
+    a.splice(insertPos, 0, letter);
+    return a;
+  }
+  // Advance both disks one step, given the index `i` used for this letter.
+  // Returns [newLeft, newRight]. Shared by encrypt, decrypt, and the
+  // visualizer (via CipherLib) so the disk animation can never drift from
+  // what encrypt()/decrypt() actually do.
+  function chaoStep(left, right, i) {
+    const leftR = chaoRotate(left, i);
+    const rightR = chaoRotate(right, i + 1);
+    return [chaoRemoveInsert(leftR, 1, 13), chaoRemoveInsert(rightR, 2, 13)];
+  }
+
+  register({
+    id: 'chaocipher',
+    label: 'Chaocipher',
+    fields: [
+      { name: 'leftAlphabet', label: 'Left disk alphabet (ciphertext), 26 letters', type: 'text', placeholder: 'e.g. XLEMFHIWOVNYRUDQCJPASGBTKZ' },
+      { name: 'rightAlphabet', label: 'Right disk alphabet (plaintext), 26 letters', type: 'text', placeholder: 'e.g. SGLBIZHJMFTRXAVKNQPDWYCUOE' },
+    ],
+    randomKey() {
+      const leftAlphabet = shuffled(ALPHABET.split('')).join('');
+      const rightAlphabet = shuffled(ALPHABET.split('')).join('');
+      return { key: { leftAlphabet, rightAlphabet }, values: { leftAlphabet, rightAlphabet } };
+    },
+    keyFromValues(values) {
+      const left = onlyLetters(values.leftAlphabet);
+      const right = onlyLetters(values.rightAlphabet);
+      if (left.length !== 26 || new Set(left).size !== 26) throw new Error('Left disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      if (right.length !== 26 || new Set(right).size !== 26) throw new Error('Right disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      return { leftAlphabet: left, rightAlphabet: right };
+    },
+    keyInfo(key) { return `left=${key.leftAlphabet} right=${key.rightAlphabet}`; },
+    encrypt(pt, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of pt) {
+        const i = right.indexOf(ch);
+        out += left[i];
+        [left, right] = chaoStep(left, right, i);
+      }
+      return out;
+    },
+    decrypt(ct, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of ct) {
+        const i = left.indexOf(ch);
+        out += right[i];
+        [left, right] = chaoStep(left, right, i);
+      }
+      return out;
+    },
+  });
+
+  // ---------------------------------------------------------------------
   // Vigenere / Beaufort / Porta / Autokey / Running key (all straight-alphabet,
   // repeating- or extending-key polyalphabetic ciphers)
   // ---------------------------------------------------------------------
@@ -1703,6 +1783,9 @@
     mod,
     letterNum,
     numLetter,
+    chaoRotate,
+    chaoRemoveInsert,
+    chaoStep,
     onlyLetters,
     randInt,
     randChoice,

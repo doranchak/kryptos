@@ -246,6 +246,22 @@ td.mono, .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
 .viz-homophone-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.85rem; flex-wrap: wrap; }
 .viz-homophone-letter { width: 1.4em; font-weight: 700; }
 
+.viz-chao-disks { display: flex; gap: 20px; flex-wrap: wrap; margin: 6px 0 10px; }
+.viz-chao-disk { flex: 1 1 220px; max-width: 260px; }
+.viz-chao-disk-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-align: center; margin-bottom: 4px; }
+.viz-chao-disk-host { width: 100%; aspect-ratio: 1 / 1; }
+.viz-chao-disk-svg { width: 100%; height: 100%; }
+.viz-chao-disk-ring { fill: var(--mono-bg); stroke: var(--border); }
+.viz-chao-disk-tick { stroke: var(--text-muted); stroke-width: 2; }
+.viz-chao-tab circle { fill: var(--panel); stroke: var(--border); transition: fill 0.1s, stroke 0.1s; }
+.viz-chao-tab text {
+  fill: var(--text); font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px; font-weight: 600;
+}
+.viz-chao-tab.zero circle { stroke: var(--accent-hover); stroke-width: 2; }
+.viz-chao-tab.hl circle { fill: var(--accent); stroke: var(--accent); }
+.viz-chao-tab.hl text { fill: var(--accent-contrast); }
+
 @media (max-width: 900px) {
   .viz-detail-row { grid-template-columns: 1fr; }
   .viz-io-row { grid-template-columns: 1fr; }

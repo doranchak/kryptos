@@ -18,7 +18,7 @@
     CIPHERS, ALPHABET, mod, letterNum, numLetter, onlyLetters, keyedAlphabet26,
     keyedSymbolSequence, keywordColumnRanks, orderFromRanks, rangeArray,
     buildHomophoneTables, buildPolybiusSquare, buildTrifidCube, buildPlayfairGrid,
-    matVecMul, buildEnigmaMachine,
+    matVecMul, buildEnigmaMachine, chaoStep,
   } = CL;
 
   // ---------------------------------------------------------------------
@@ -36,6 +36,55 @@
     const inv = new Array(out.length);
     out.forEach((origIdx, j) => { inv[origIdx] = j; });
     return inv;
+  }
+
+  // ---------------------------------------------------------------------
+  // Chaocipher rotating-disk diagram: a ring of 26 letter tabs in the disk's
+  // current order, index 0 marked at the top (the tick mark, matching where
+  // rotate/remove/insert operate), the tab at `highlightIndex` picked out.
+  // Rebuilding this per hover (rather than just toggling CSS classes on a
+  // static table, like the other adapters) is what actually makes the tabs
+  // visibly "rotate" between letters, since each step's disk order really is
+  // a different permutation.
+  // ---------------------------------------------------------------------
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function renderChaoDisk(host, letters, highlightIndex) {
+    host.innerHTML = '';
+    const size = 240, cx = 120, cy = 120, R = 92, r = 13;
+    const svg = svgEl('svg', { viewBox: `0 0 ${size} ${size}`, class: 'viz-chao-disk-svg' });
+    svg.appendChild(svgEl('circle', { cx, cy, r: R + r + 5, class: 'viz-chao-disk-ring' }));
+    const zAngle = -Math.PI / 2;
+    svg.appendChild(svgEl('line', {
+      x1: cx + (R - r) * Math.cos(zAngle), y1: cy + (R - r) * Math.sin(zAngle),
+      x2: cx + (R + r + 15) * Math.cos(zAngle), y2: cy + (R + r + 15) * Math.sin(zAngle),
+      class: 'viz-chao-disk-tick',
+    }));
+    for (let k = 0; k < letters.length; k++) {
+      const angle = zAngle + k * (2 * Math.PI / letters.length);
+      const x = cx + R * Math.cos(angle), y = cy + R * Math.sin(angle);
+      const g = svgEl('g', { class: 'viz-chao-tab' + (k === highlightIndex ? ' hl' : '') + (k === 0 ? ' zero' : '') });
+      g.appendChild(svgEl('circle', { cx: x, cy: y, r }));
+      const t = svgEl('text', { x, y: y + 1, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+      t.textContent = letters[k];
+      g.appendChild(t);
+      svg.appendChild(g);
+    }
+    host.appendChild(svg);
+  }
+  function renderChaoDiskPair(state, stepIdx) {
+    if (stepIdx == null || stepIdx < 0 || !state.steps.length) {
+      renderChaoDisk(state.leftHost, state.key.leftAlphabet.split(''), -1);
+      renderChaoDisk(state.rightHost, state.key.rightAlphabet.split(''), -1);
+      return;
+    }
+    const st = state.steps[stepIdx];
+    renderChaoDisk(state.leftHost, st.left, st.i);
+    renderChaoDisk(state.rightHost, st.right, st.i);
   }
 
   // ---------------------------------------------------------------------
@@ -322,6 +371,58 @@
         keyIds: [{ id: 'homo-line-' + p, cls: 'hl-line' }, { id: 'homo-' + p + '-' + code, cls: 'hl' }],
         current: `Digit pair at ciphertext positions ${2 * i}-${2 * i + 1} = '${code}'  →  decodes to P='${p}'`,
       };
+    },
+  };
+
+  // ---- Chaocipher ----
+  ADAPTERS.chaocipher = {
+    build(pt, ct, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      const steps = [];
+      for (let k = 0; k < pt.length; k++) {
+        const ptChar = pt[k];
+        const i = right.indexOf(ptChar);
+        const ctChar = left[i];
+        steps.push({ left: left.slice(), right: right.slice(), i, ptChar, ctChar });
+        [left, right] = chaoStep(left, right, i);
+      }
+      return { pt, ct, key, steps };
+    },
+    renderKeyPanel(container, state) {
+      container.appendChild(el('div', 'viz-subheading', 'Rotating disks'));
+      const wrap = el('div', 'viz-chao-disks');
+      const leftCol = el('div', 'viz-chao-disk');
+      leftCol.appendChild(el('div', 'viz-chao-disk-label', 'Left disk (ciphertext alphabet)'));
+      const leftHost = el('div', 'viz-chao-disk-host');
+      leftCol.appendChild(leftHost);
+      const rightCol = el('div', 'viz-chao-disk');
+      rightCol.appendChild(el('div', 'viz-chao-disk-label', 'Right disk (plaintext alphabet)'));
+      const rightHost = el('div', 'viz-chao-disk-host');
+      rightCol.appendChild(rightHost);
+      wrap.appendChild(leftCol); wrap.appendChild(rightCol);
+      container.appendChild(wrap);
+      state.leftHost = leftHost;
+      state.rightHost = rightHost;
+      renderChaoDiskPair(state, state.steps.length ? 0 : -1);
+      container.appendChild(el('p', 'viz-note',
+        'Each disk shows its current 26-letter arrangement, index 0 at the tick mark, going clockwise. The ' +
+        'highlighted tab is the index used this step - found in the right disk (where the plaintext letter ' +
+        'sits) and read off the left disk (the ciphertext letter), or the mirror image when decrypting. After ' +
+        'each letter: the left disk rotates that index to position 0, then moves its neighbor (position 1) to ' +
+        'position 13; the right disk does the same but rotated one extra step first (position 2 moves to ' +
+        'position 13) - that one-step offset is what lets the disks re-synchronize correctly for decryption.'));
+    },
+    formulaTemplate: 'i = index of P in RIGHT;  C = LEFT[i].  Then LEFT rotates by i (remove pos 1 → insert pos 13); RIGHT rotates by i+1 (remove pos 2 → insert pos 13).',
+    hoverPt(state, idx) {
+      renderChaoDiskPair(state, idx);
+      const st = state.steps[idx];
+      return { ct: [idx], current: `Step ${idx + 1}: P='${st.ptChar}' found at RIGHT[${st.i}]  →  C = LEFT[${st.i}] = '${st.ctChar}'` };
+    },
+    hoverCt(state, idx) {
+      renderChaoDiskPair(state, idx);
+      const st = state.steps[idx];
+      return { pt: [idx], current: `Step ${idx + 1}: C='${st.ctChar}' found at LEFT[${st.i}]  →  P = RIGHT[${st.i}] = '${st.ptChar}'` };
     },
   };
 
@@ -1121,6 +1222,11 @@
   const SAMPLES = {
     simple_substitution: { values: { cipherAlphabet: keyedAlphabet26('KRYPTOS') } },
     homophonic_substitution: { values: { keyword: 'SHADOW' } },
+    // These are exactly the disk alphabets from a dcode.gr-generated Chaocipher
+    // vector (see scripts/test_ciphers.js) - since DEFAULT_PT_DISPLAY below is
+    // that same vector's plaintext, loading this sample reproduces its exact
+    // ciphertext letter-for-letter.
+    chaocipher: { values: { leftAlphabet: 'XLEMFHIWOVNYRUDQCJPASGBTKZ', rightAlphabet: 'SGLBIZHJMFTRXAVKNQPDWYCUOE' } },
     autokey: { values: { primer: 'KRYPTOS' } },
     columnar_transposition: { values: { keyword: 'ZEBRAS' } },
     double_columnar_transposition: { values: { keyword1: 'ZEBRAS', keyword2: 'CIPHER' } },

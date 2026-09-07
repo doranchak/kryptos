@@ -10,7 +10,7 @@
 
   // Dropdown order mirrors the cipher list as specified for this tool.
   const CIPHER_ORDER = [
-    'simple_substitution', 'homophonic_substitution', 'autokey',
+    'simple_substitution', 'homophonic_substitution', 'chaocipher', 'autokey',
     'columnar_transposition', 'double_columnar_transposition', 'rail_fence',
     'myszkowski', 'adfgx', 'adfgvx', 'bifid', 'trifid',
     'quagmire1', 'quagmire2', 'quagmire3', 'quagmire4',
@@ -23,6 +23,7 @@
   const CIPHER_HINTS = {
     simple_substitution: 'Each plaintext letter always maps to the same cipher letter; the cipher alphabet is a fixed permutation of A-Z.',
     homophonic_substitution: 'Each plaintext letter maps to one of several 2-digit codes (00-99), allocated proportional to English letter frequency so the ciphertext distribution is closer to flat. Ciphertext is digits, decoded 2 at a time.',
+    chaocipher: 'Two 26-letter "disks" (left = ciphertext alphabet, right = plaintext alphabet) that dynamically reshuffle after every single letter, so the effective substitution never repeats and never settles into a fixed pattern.',
     autokey: 'A short primer keyword starts the key stream; after that, the key stream continues with the plaintext itself.',
     columnar_transposition: 'Plaintext is written into rows under a keyword; columns are read off in the keyword’s alphabetical order. Keyword letters must be distinct.',
     double_columnar_transposition: 'Columnar transposition applied twice, once with each keyword.',
