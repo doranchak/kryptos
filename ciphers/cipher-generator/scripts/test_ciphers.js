@@ -333,6 +333,21 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(CIPHERS.chaocipher.decrypt(expectedCt, key), pt, 'Chaocipher decrypts the dcode.gr ciphertext directly');
 }
 
+// --- Move-to-Front / Move-to-Back, hand-worked vectors (keyword "ABC" ->
+// starting alphabet is just straight A-Z, so the arithmetic is easy to
+// check by hand: plaintext "BANANA" repeatedly re-uses B/A/N, so each
+// cipher's characteristic drift is visible within a few letters) ---
+{
+  const key = { keyword: 'ABC' };
+  const ctF = CIPHERS.move_to_front.encrypt('BANANA', key);
+  assertEq(ctF, 'BBNBBB', 'Move-to-Front hand-worked vector (BANANA)');
+  assertEq(CIPHERS.move_to_front.decrypt(ctF, key), 'BANANA', 'Move-to-Front decrypt round-trip');
+
+  const ctB = CIPHERS.move_to_back.encrypt('BANANA', key);
+  assertEq(ctB, 'BALYYY', 'Move-to-Back hand-worked vector (BANANA)');
+  assertEq(CIPHERS.move_to_back.decrypt(ctB, key), 'BANANA', 'Move-to-Back decrypt round-trip');
+}
+
 // --- Vigenere textbook vector ---
 {
   const key = { keyword: 'LEMON' };

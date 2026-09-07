@@ -12,13 +12,22 @@ is embedded directly into the page via `js/data/*.js`.
 
 ## Features
 
-- **33 cipher types**: simple substitution, homophonic substitution,
-  **Chaocipher**, autokey, columnar transposition, double columnar
+- **35 cipher types**: simple substitution, homophonic substitution,
+  **Chaocipher**, **Move-to-Front substitution**, **Move-to-Back
+  substitution**, autokey, columnar transposition, double columnar
   transposition, rail fence, Myszkowski transposition, ADFGX, ADFGVX, bifid,
   trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**, **Running Key
   I-IV**, **running key + transposition**, **transposition + running key**,
   Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale, **Solitaire
   (Pontifex)**, **Mirdek**.
+  - Move-to-Front / Move-to-Back substitution: a single keyed 26-letter
+    alphabet acts as a self-modifying substitution table. To encrypt
+    plaintext letter P, find P's current position in that alphabet (0-25) —
+    that position, read straight off A=0..Z=25, is the ciphertext letter —
+    then move P to the very front (MTF) or very back (MTB) of the alphabet,
+    shifting the letters in between to fill the gap. Frequently-used letters
+    drift toward the front (or back), so the effective shift changes with
+    every single letter — a "self-organizing list" turned into a cipher.
   - Chaocipher (John F. Byrne): two 26-letter "disks" - a left (ciphertext)
     and right (plaintext) alphabet - that dynamically permute after every
     single letter (each disk rotates to bring the letter just used to
@@ -101,7 +110,11 @@ is embedded directly into the page via `js/data/*.js`.
   actual playing-card tiles (red/black, with jokers marked) for the deck (or
   the Left/Right/Discard piles), redrawn on every hover to that letter's
   exact state, with a step-by-step breakdown of the joker moves/cuts (or
-  counted cut/letter search) that produced it.
+  counted cut/letter search) that produced it. For Move-to-Front/Move-to-Back
+  it draws the full 26-letter alphabet strip, redrawn on every hover to
+  exactly how it stood *before* that letter was looked up, with the used
+  position highlighted so the front-ward (or back-ward) drift is visible
+  letter by letter.
 
 Note: the target length governs the *plaintext* letter count that gets
 selected, not necessarily the final ciphertext length — ciphers that
@@ -199,4 +212,12 @@ which lays out every intermediate pile state for a full initialisation +
 implementation reproduces every one of those intermediate states exactly,
 not just the final ciphertext (building it against that page's line-by-line
 trace is in fact how a real bug in the mixing phase's final pile-swap was
-caught and fixed).
+caught and fixed). Move-to-Front and Move-to-Back substitution are not
+historically-attested named ciphers with a canonical published reference —
+they're a straightforward implementation of the classic "move-to-front"
+self-organizing-list transform (well known from data compression, e.g.
+Burrows-Wheeler-based compressors) repurposed as a cipher. Correctness is
+checked against a small hand-worked vector chosen so the arithmetic is easy
+to verify by hand: keyword `ABC` (which keys to a plain, unshifted A-Z
+starting alphabet) encrypting `BANANA`, independently derived twice for both
+MTF and MTB and locked in as a permanent KAT in `scripts/test_ciphers.js`.

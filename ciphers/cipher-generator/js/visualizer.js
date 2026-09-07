@@ -22,6 +22,7 @@
     SOLITAIRE_JOKER_A, SOLITAIRE_JOKER_B, solitairePassphraseKey, solitaireRoundTraced,
     solitaireNextKeystreamValue, solitaireCardValue, solitaireKeystreamValue,
     mirdekVal, mirdekSetup, mirdekCountedCutWithTrace, mirdekLetterSearch, mirdekDealN,
+    moveToFront, moveToBack,
   } = CL;
 
   // ---------------------------------------------------------------------
@@ -428,6 +429,64 @@
       return { pt: [idx], current: `Step ${idx + 1}: C='${st.ctChar}' found at LEFT[${st.i}]  →  P = RIGHT[${st.i}] = '${st.ptChar}'` };
     },
   };
+
+  // ---- Move-to-Front / Move-to-Back ----
+  function buildMoveToEnd(mover) {
+    return function build(pt, ct, key) {
+      let alphabet = keyedAlphabet26(key.keyword).split('');
+      const initialAlphabet = alphabet.slice();
+      const steps = [];
+      for (let i = 0; i < pt.length; i++) {
+        const idx = alphabet.indexOf(pt[i]);
+        steps.push({ alphabetBefore: alphabet.slice(), idx, ptChar: pt[i], ctChar: ct[i] });
+        alphabet = mover(alphabet, idx);
+      }
+      return { pt, ct, key, initialAlphabet, steps };
+    };
+  }
+  function renderMoveToEndAlphabet(host, arr, highlightIdx) {
+    host.innerHTML = '';
+    const row = el('div', 'viz-strip-row');
+    arr.forEach((ch, i) => {
+      const c = cell(ch);
+      // Mark the "front" slot, unless it's also the active highlight - .hl's
+      // dark background + light text and .hl-soft's light background would
+      // otherwise both apply and leave the letter invisible (light-on-light).
+      if (i === 0 && i !== highlightIdx) c.classList.add('hl-soft');
+      if (i === highlightIdx) c.classList.add('hl');
+      row.appendChild(c);
+    });
+    host.appendChild(row);
+  }
+  function moveToEndHoverAt(state, idx, isPt, directionWord) {
+    const step = state.steps[idx];
+    renderMoveToEndAlphabet(state.alphaHost, step.alphabetBefore, step.idx);
+    const info = { current: `Position of '${step.ptChar}' in the current alphabet is ${step.idx} → C = straight[${step.idx}] = '${step.ctChar}'.  '${step.ptChar}' now moves to the ${directionWord}.` };
+    if (isPt) info.ct = [idx]; else info.pt = [idx];
+    return info;
+  }
+  function makeMoveToEndAdapter(mover, directionWord) {
+    return {
+      build: buildMoveToEnd(mover),
+      renderKeyPanel(container, state) {
+        container.appendChild(el('div', 'viz-subheading', 'Current alphabet (dashed = front slot, position 0)'));
+        const host = el('div');
+        container.appendChild(host);
+        state.alphaHost = host;
+        renderMoveToEndAlphabet(host, state.initialAlphabet, -1);
+        container.appendChild(el('p', 'viz-note',
+          `Hover a letter to see the alphabet exactly as it stood when that letter was looked up (its position ` +
+          `highlighted), before it moved to the ${directionWord}. Because a letter's position depends entirely on ` +
+          `how recently it was last used, frequent letters drift toward the ${directionWord}, and the effective ` +
+          `shift changes with every single letter.`));
+      },
+      formulaTemplate: `idx = current position of P in the alphabet;  C = straight[idx] (A=0..Z=25).  Then P moves to the ${directionWord.toUpperCase()}; the letters in between shift to fill the gap.`,
+      hoverPt(state, idx) { return moveToEndHoverAt(state, idx, true, directionWord); },
+      hoverCt(state, idx) { return moveToEndHoverAt(state, idx, false, directionWord); },
+    };
+  }
+  ADAPTERS.move_to_front = makeMoveToEndAdapter(moveToFront, 'front');
+  ADAPTERS.move_to_back = makeMoveToEndAdapter(moveToBack, 'back');
 
   // ---- Vigenere-family (vigenere, beaufort, porta, autokey, running_key, running_key_aca) ----
   const VIG_FORMULA = {
@@ -1389,6 +1448,8 @@
     // that same vector's plaintext, loading this sample reproduces its exact
     // ciphertext letter-for-letter.
     chaocipher: { values: { leftAlphabet: 'XLEMFHIWOVNYRUDQCJPASGBTKZ', rightAlphabet: 'SGLBIZHJMFTRXAVKNQPDWYCUOE' } },
+    move_to_front: { values: { keyword: 'SHADOW' } },
+    move_to_back: { values: { keyword: 'SHADOW' } },
     autokey: { values: { primer: 'KRYPTOS' } },
     columnar_transposition: { values: { keyword: 'ZEBRAS' } },
     double_columnar_transposition: { values: { keyword1: 'ZEBRAS', keyword2: 'CIPHER' } },

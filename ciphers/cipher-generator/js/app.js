@@ -10,7 +10,8 @@
 
   // Dropdown order mirrors the cipher list as specified for this tool.
   const CIPHER_ORDER = [
-    'simple_substitution', 'homophonic_substitution', 'chaocipher', 'autokey',
+    'simple_substitution', 'homophonic_substitution', 'chaocipher',
+    'move_to_front', 'move_to_back', 'autokey',
     'columnar_transposition', 'double_columnar_transposition', 'rail_fence',
     'myszkowski', 'adfgx', 'adfgvx', 'bifid', 'trifid',
     'quagmire1', 'quagmire2', 'quagmire3', 'quagmire4',
@@ -24,6 +25,8 @@
     simple_substitution: 'Each plaintext letter always maps to the same cipher letter; the cipher alphabet is a fixed permutation of A-Z.',
     homophonic_substitution: 'Each plaintext letter maps to one of several 2-digit codes (00-99), allocated proportional to English letter frequency so the ciphertext distribution is closer to flat. Ciphertext is digits, decoded 2 at a time.',
     chaocipher: 'Two 26-letter "disks" (left = ciphertext alphabet, right = plaintext alphabet) that dynamically reshuffle after every single letter, so the effective substitution never repeats and never settles into a fixed pattern.',
+    move_to_front: 'A single keyed alphabet substitution table: each plaintext letter’s current position (0-25) is the ciphertext, then that letter moves to the very front of the alphabet, so frequently-used letters drift toward the front and the effective shift changes with every letter.',
+    move_to_back: 'Like Move-to-Front, but the used letter moves to the very back of the alphabet instead of the front - frequently-used letters drift toward the back, and an immediately-repeated letter always encrypts to ’Z’.',
     autokey: 'A short primer keyword starts the key stream; after that, the key stream continues with the plaintext itself.',
     columnar_transposition: 'Plaintext is written into rows under a keyword; columns are read off in the keyword’s alphabetical order. Keyword letters must be distinct.',
     double_columnar_transposition: 'Columnar transposition applied twice, once with each keyword.',

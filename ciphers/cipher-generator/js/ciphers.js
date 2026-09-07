@@ -321,6 +321,75 @@
   });
 
   // ---------------------------------------------------------------------
+  // Move-to-Front / Move-to-Back substitution. A single keyed 26-letter
+  // alphabet acts as a dynamic substitution table: to encrypt plaintext
+  // letter P, find P's current position in that alphabet (0-25) - that
+  // position, read straight off A=0..Z=25, IS the ciphertext letter - then
+  // move P to the very front (MTF) or very back (MTB), shifting the letters
+  // in between to fill the gap. Since a letter's position depends entirely
+  // on how recently it was last used, frequent letters drift toward
+  // whichever end they get promoted to, changing the effective substitution
+  // (and the "shift distance" from a letter's original position) every
+  // single letter. Decrypt is the mirror image: the ciphertext letter's
+  // straight A=0..Z=25 value gives the position to read the plaintext
+  // letter from, and the same move is then applied.
+  // ---------------------------------------------------------------------
+  function moveToFront(arr, idx) {
+    const a = arr.slice();
+    const letter = a.splice(idx, 1)[0];
+    a.unshift(letter);
+    return a;
+  }
+  function moveToBack(arr, idx) {
+    const a = arr.slice();
+    const letter = a.splice(idx, 1)[0];
+    a.push(letter);
+    return a;
+  }
+  function moveToEndEncrypt(pt, keyword, mover) {
+    let alphabet = keyedAlphabet26(keyword).split('');
+    let out = '';
+    for (const ch of pt) {
+      const idx = alphabet.indexOf(ch);
+      out += numLetter(idx);
+      alphabet = mover(alphabet, idx);
+    }
+    return out;
+  }
+  function moveToEndDecrypt(ct, keyword, mover) {
+    let alphabet = keyedAlphabet26(keyword).split('');
+    let out = '';
+    for (const ch of ct) {
+      const idx = letterNum(ch);
+      const p = alphabet[idx];
+      out += p;
+      alphabet = mover(alphabet, idx);
+    }
+    return out;
+  }
+  function registerMoveToEnd(id, label, mover) {
+    register({
+      id,
+      label,
+      fields: [{ name: 'keyword', label: 'Keyword (builds the starting mixed alphabet)', type: 'text', placeholder: 'e.g. SHADOW' }],
+      randomKey() {
+        const keyword = pickDictionaryWord(5, 9);
+        return { key: { keyword }, values: { keyword } };
+      },
+      keyFromValues(values) {
+        const keyword = onlyLetters(values.keyword);
+        validateLength(keyword, 'Keyword');
+        return { keyword };
+      },
+      keyInfo(key) { return `keyword=${key.keyword}`; },
+      encrypt(pt, key) { return moveToEndEncrypt(pt, key.keyword, mover); },
+      decrypt(ct, key) { return moveToEndDecrypt(ct, key.keyword, mover); },
+    });
+  }
+  registerMoveToEnd('move_to_front', 'Move-to-Front Substitution', moveToFront);
+  registerMoveToEnd('move_to_back', 'Move-to-Back Substitution', moveToBack);
+
+  // ---------------------------------------------------------------------
   // Vigenere / Beaufort / Porta / Autokey / Running key (all straight-alphabet,
   // repeating- or extending-key polyalphabetic ciphers)
   // ---------------------------------------------------------------------
@@ -2117,6 +2186,8 @@
     chaoRotate,
     chaoRemoveInsert,
     chaoStep,
+    moveToFront,
+    moveToBack,
     onlyLetters,
     randInt,
     randChoice,
