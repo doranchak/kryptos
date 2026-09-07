@@ -1771,6 +1771,316 @@
     decrypt(ct, key) { return enigmaProcess(ct, key); }, // self-reciprocal given identical settings
   });
 
+  // ---------------------------------------------------------------------
+  // Solitaire / Pontifex (Bruce Schneier). A 54-card deck (52 cards + 2
+  // distinguishable jokers) generates a keystream: move joker A down 1 card,
+  // move joker B down 2, triple-cut around the jokers, count-cut by the
+  // bottom card's value, then read off an output card by counting from the
+  // top card's value - skip and repeat from the top if a joker comes up.
+  // Cards are numbered 1-52 in bridge suit order (clubs, diamonds, hearts,
+  // spades) plus two extra ids for the jokers; keystream/cut values fold
+  // both jokers to 53, and the final 1-26 keystream value folds every card
+  // above 26 down by 26 (so both black and red court cards of the same rank
+  // give the same value). Algorithm verified letter-for-letter against all
+  // three official worked examples on schneier.com/academic/solitaire (see
+  // scripts/test_ciphers.js).
+  // ---------------------------------------------------------------------
+  const SOLITAIRE_JOKER_A = 53;
+  const SOLITAIRE_JOKER_B = 54;
+  function solitaireUnkeyedDeck() {
+    const d = [];
+    for (let i = 1; i <= 52; i++) d.push(i);
+    d.push(SOLITAIRE_JOKER_A, SOLITAIRE_JOKER_B);
+    return d;
+  }
+  function solitaireIsJoker(c) { return c === SOLITAIRE_JOKER_A || c === SOLITAIRE_JOKER_B; }
+  function solitaireCardValue(c) { return solitaireIsJoker(c) ? 53 : c; } // 1-53, for cut amounts
+  function solitaireKeystreamValue(c) { return c <= 26 ? c : c - 26; } // 1-26, for the actual keystream
+  // Card id -> display name, e.g. 14 -> "A-diamonds", 53/54 -> "Joker A"/"Joker B".
+  const SOLITAIRE_SUITS = ['clubs', 'diamonds', 'hearts', 'spades'];
+  const SOLITAIRE_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  function solitaireCardName(c) {
+    if (c === SOLITAIRE_JOKER_A) return 'Joker A';
+    if (c === SOLITAIRE_JOKER_B) return 'Joker B';
+    const suit = SOLITAIRE_SUITS[Math.floor((c - 1) / 13)];
+    const rank = SOLITAIRE_RANKS[(c - 1) % 13];
+    return `${rank}-${suit}`;
+  }
+  function solitaireMoveJoker(deck, jokerVal, steps) {
+    const n = deck.length;
+    for (let s = 0; s < steps; s++) {
+      const idx = deck.indexOf(jokerVal);
+      let newIdx = idx + 1;
+      if (newIdx >= n) newIdx = 1; // wrap past the bottom -> just below the top card
+      deck.splice(idx, 1);
+      deck.splice(newIdx, 0, jokerVal);
+    }
+  }
+  function solitaireTripleCut(deck) {
+    const ia = deck.indexOf(SOLITAIRE_JOKER_A), ib = deck.indexOf(SOLITAIRE_JOKER_B);
+    const lo = Math.min(ia, ib), hi = Math.max(ia, ib);
+    return deck.slice(hi + 1).concat(deck.slice(lo, hi + 1)).concat(deck.slice(0, lo));
+  }
+  function solitaireCountCut(deck, n) {
+    if (n === undefined) n = solitaireCardValue(deck[deck.length - 1]);
+    if (n === 0) return deck.slice();
+    return deck.slice(n, deck.length - 1).concat(deck.slice(0, n)).concat([deck[deck.length - 1]]);
+  }
+  // One full round (mutates `deck` in place to its post-round state). Returns
+  // a trace object; `.outputCard` is null when a joker came up (caller should
+  // run another round immediately, per "start over again with step 1").
+  function solitaireRoundTraced(deck) {
+    const before = deck.slice();
+    solitaireMoveJoker(deck, SOLITAIRE_JOKER_A, 1);
+    const afterA = deck.slice();
+    solitaireMoveJoker(deck, SOLITAIRE_JOKER_B, 2);
+    const afterB = deck.slice();
+    const afterTriple = solitaireTripleCut(deck);
+    const bottomCard = afterTriple[afterTriple.length - 1];
+    const cutN = solitaireCardValue(bottomCard);
+    const afterCount = solitaireCountCut(afterTriple);
+    for (let i = 0; i < afterCount.length; i++) deck[i] = afterCount[i];
+    const topCard = deck[0];
+    const topVal = solitaireCardValue(topCard);
+    const outIdx = topVal % deck.length;
+    const rawOutput = deck[outIdx];
+    const isJoker = solitaireIsJoker(rawOutput);
+    return {
+      before, afterA, afterB, afterTriple, bottomCard, cutN, afterCount,
+      topCard, topVal, outIdx, rawOutput, isJoker,
+      outputCard: isJoker ? null : rawOutput,
+      keystreamValue: isJoker ? null : solitaireKeystreamValue(rawOutput),
+    };
+  }
+  // Keeps calling solitaireRoundTraced until a non-joker output appears;
+  // returns {rounds: [...every attempt...], keystreamValue}.
+  function solitaireNextKeystreamValue(deck) {
+    const rounds = [];
+    for (let guard = 0; guard < 1000; guard++) {
+      const r = solitaireRoundTraced(deck);
+      rounds.push(r);
+      if (!r.isJoker) return { rounds, keystreamValue: r.keystreamValue };
+    }
+    throw new Error('Solitaire: too many consecutive jokers (deck may be corrupt).');
+  }
+  function solitaireRawKeystream(deck, n) {
+    const out = [];
+    while (out.length < n) out.push(solitaireNextKeystreamValue(deck).keystreamValue);
+    return out;
+  }
+  // Passphrase keying (Schneier's "keying method 3"): repeat move-A, move-B,
+  // triple-cut, a normal count-cut, then a SECOND count-cut using the
+  // passphrase letter's value (A=1..Z=26) instead of the bottom card - once
+  // per passphrase character, starting from the unkeyed deck.
+  function solitairePassphraseKey(passphrase) {
+    const deck = solitaireUnkeyedDeck();
+    for (const ch of passphrase) {
+      solitaireMoveJoker(deck, SOLITAIRE_JOKER_A, 1);
+      solitaireMoveJoker(deck, SOLITAIRE_JOKER_B, 2);
+      let d = solitaireTripleCut(deck);
+      d = solitaireCountCut(d);
+      d = solitaireCountCut(d, letterNum(ch) + 1);
+      for (let i = 0; i < d.length; i++) deck[i] = d[i];
+    }
+    return deck;
+  }
+  // Solitaire's own 1-26 (not 0-25) letter arithmetic: A+A=B, and wraparound
+  // only kicks in once the sum actually exceeds 26 - this is NOT the same as
+  // ordinary 0-indexed mod-26 addition (verified against schneier.com's own
+  // "DONOTUSEPC" worked example, which pins this exact behavior).
+  function solitaireAdd(p, k) { let s = p + k; if (s > 26) s -= 26; return s; }
+  function solitaireSub(c, k) { let s = c - k; if (s <= 0) s += 26; return s; }
+
+  register({
+    id: 'solitaire',
+    label: 'Solitaire (Pontifex)',
+    fields: [{ name: 'passphrase', label: 'Passphrase (keys the deck - the longer the better)', type: 'textarea', placeholder: 'e.g. a long, hard-to-guess phrase' }],
+    randomKey() {
+      const passphrase = pickDictionaryWord(6, 10) + pickDictionaryWord(6, 10);
+      return { key: { passphrase }, values: { passphrase } };
+    },
+    keyFromValues(values) {
+      const passphrase = onlyLetters(values.passphrase);
+      validateLength(passphrase, 'Passphrase');
+      return { passphrase };
+    },
+    keyInfo(key) { return `passphrase=${key.passphrase}`; },
+    encrypt(pt, key) {
+      const deck = solitairePassphraseKey(key.passphrase);
+      const ks = solitaireRawKeystream(deck, pt.length).map(solitaireKeystreamValue);
+      return pt.split('').map((ch, i) => numLetter(solitaireAdd(letterNum(ch) + 1, ks[i]) - 1)).join('');
+    },
+    decrypt(ct, key) {
+      const deck = solitairePassphraseKey(key.passphrase);
+      const ks = solitaireRawKeystream(deck, ct.length).map(solitaireKeystreamValue);
+      return ct.split('').map((ch, i) => numLetter(solitaireSub(letterNum(ch) + 1, ks[i]) - 1)).join('');
+    },
+  });
+
+  // ---------------------------------------------------------------------
+  // Mirdek (Paul Crowley). Two 26-card piles ("left" and "right", each a
+  // permutation of A-Z - one letter per card, colour/suit only ever matters
+  // as a way to split the 52-card deck into these two halves) plus a
+  // transient "discard" pile. Two primitive moves - a counted cut (draw the
+  // right pile's top card, cut the left pile by its value) and a letter
+  // search (deal the left pile onto two alternating piles until a target
+  // letter appears, then reassemble) - drive initialisation, keying, mixing,
+  // and encryption. Algorithm verified step-for-step (every intermediate
+  // pile state) against the full worked example at
+  // ciphergoth.org/crypto/mirdek/example.html (see scripts/test_ciphers.js).
+  // Piles are stored top-card-first regardless of face-up/face-down-ness.
+  // ---------------------------------------------------------------------
+  function mirdekVal(ch) { return letterNum(ch) + 1; } // A=1..Z=26
+
+  // One non-cascading counted-cut step: draw right's top card (its LAST
+  // array element - see file header), cut left by that card's value.
+  function mirdekCountedCutStep(state) {
+    const { left, right, discard } = state;
+    const card = right[right.length - 1];
+    const newRight = right.slice(0, -1);
+    const newDiscard = [card].concat(discard);
+    const n = mirdekVal(card);
+    const moved = left.slice(0, n);
+    const newLeft = left.slice(n).concat(moved);
+    return { left: newLeft, right: newRight, discard: newDiscard, drawnCard: card, n, emptied: newRight.length === 0 };
+  }
+  // Full counted cut, cascading (swap piles and cut again) if the right
+  // pile empties out - used by the encrypt/decrypt hot path.
+  function mirdekCountedCut(state) {
+    const r = mirdekCountedCutStep(state);
+    if (r.emptied) return mirdekCountedCut({ left: r.discard, right: r.left, discard: [] });
+    return { left: r.left, right: r.right, discard: r.discard };
+  }
+  // Same operation, but returns every sub-cut (including cascades) for the
+  // visualizer instead of just the final state.
+  function mirdekCountedCutWithTrace(state) {
+    const steps = [];
+    let cur = state;
+    for (let guard = 0; guard < 1000; guard++) {
+      const r = mirdekCountedCutStep(cur);
+      const after = { left: r.left, right: r.right, discard: r.discard };
+      steps.push({ before: cur, drawnCard: r.drawnCard, n: r.n, after, emptied: r.emptied });
+      if (!r.emptied) return { state: after, steps };
+      cur = { left: r.discard, right: r.left, discard: [] };
+    }
+    throw new Error('Mirdek: counted cut cascaded too many times (state may be corrupt).');
+  }
+  // Deal `left` onto two face-up alternating piles (new cards on top of each)
+  // until stopPred(card, dealtCountSoFar) is true; move the pile holding the
+  // last-dealt card on top of the other, and put that combined pile beneath
+  // the undealt remainder. Drives both the letter search (stop on a target
+  // letter) and decryption's "deal N cards" step (stop after N cards).
+  function mirdekDealAlternating(leftArr, stopPred) {
+    let pileA = [], pileB = [];
+    let i = 0, placedInA = true, lastWasA = true, lastCard = null;
+    for (; i < leftArr.length;) {
+      const card = leftArr[i]; i++;
+      if (placedInA) pileA = [card].concat(pileA); else pileB = [card].concat(pileB);
+      lastWasA = placedInA; lastCard = card; placedInA = !placedInA;
+      if (stopPred(card, i)) break;
+    }
+    const remaining = leftArr.slice(i);
+    const targetPile = lastWasA ? pileA : pileB;
+    const otherPile = lastWasA ? pileB : pileA;
+    return {
+      newLeft: remaining.concat(targetPile, otherPile), lastCard, dealtCount: i,
+      pileA, pileB, targetIsA: lastWasA, remaining, dealtSequence: leftArr.slice(0, i),
+    };
+  }
+  function mirdekLetterSearch(leftArr, target) { return mirdekDealAlternating(leftArr, (c) => c === target); }
+  function mirdekDealN(leftArr, n) { return mirdekDealAlternating(leftArr, (c, dealt) => dealt === n); }
+
+  function mirdekInit(iv25) {
+    const present = new Set(iv25.split(''));
+    let missing = 'A';
+    for (const ch of ALPHABET) if (!present.has(ch)) { missing = ch; break; }
+    return { left: ALPHABET.split(''), right: iv25.split('').concat([missing]), discard: [] };
+  }
+  function mirdekKeyPhase(state, passphrase) {
+    for (const ch of passphrase) {
+      state = mirdekCountedCut(state);
+      const { newLeft } = mirdekLetterSearch(state.left, ch);
+      state = { left: newLeft, right: state.right, discard: state.discard };
+    }
+    return state;
+  }
+  function mirdekMixPhase(state) {
+    let right = state.left.slice(); // the fully-keyed left pile, put down face-down as the new right
+    let left = state.discard.concat(state.right); // discard (unchanged on top) + remaining right, below
+    let discard = [];
+    while (right.length > 0) {
+      const card = right[right.length - 1];
+      right = right.slice(0, -1);
+      discard = [card].concat(discard);
+      const { newLeft } = mirdekLetterSearch(left, card);
+      left = newLeft;
+    }
+    // Final swap: the fully-mixed pile (`left`) becomes the new face-down
+    // right pile; the accumulated draws (`discard`) become the new left pile.
+    return { left: discard, right: left, discard: [] };
+  }
+  function mirdekEncryptLetter(state, ptChar) {
+    state = mirdekCountedCut(state);
+    const { newLeft, dealtCount } = mirdekLetterSearch(state.left, ptChar);
+    const ctChar = ALPHABET[dealtCount - 1];
+    return { state: { left: newLeft, right: state.right, discard: state.discard }, ctChar };
+  }
+  function mirdekDecryptLetter(state, ctChar) {
+    state = mirdekCountedCut(state);
+    const n = mirdekVal(ctChar);
+    const { newLeft, lastCard } = mirdekDealN(state.left, n);
+    return { state: { left: newLeft, right: state.right, discard: state.discard }, ptChar: lastCard };
+  }
+  function mirdekSetup(iv25, passphrase) {
+    let state = mirdekInit(iv25);
+    state = mirdekKeyPhase(state, passphrase);
+    state = mirdekMixPhase(state);
+    return state;
+  }
+
+  register({
+    id: 'mirdek',
+    label: 'Mirdek',
+    fields: [
+      { name: 'iv', label: 'Initialization vector (25 distinct letters; encryption only - decryption reads it from the ciphertext)', type: 'text', placeholder: 'e.g. IPDZOWKGSTVARMEQYBCFJNHUL' },
+      { name: 'passphrase', label: 'Passphrase (keys the deck)', type: 'text', placeholder: 'e.g. a shared secret phrase' },
+    ],
+    randomKey() {
+      const iv = shuffled(ALPHABET.split('')).slice(0, 25).join('');
+      const passphrase = pickDictionaryWord(6, 10) + pickDictionaryWord(6, 10);
+      return { key: { iv, passphrase }, values: { iv, passphrase } };
+    },
+    keyFromValues(values) {
+      const passphrase = onlyLetters(values.passphrase);
+      validateLength(passphrase, 'Passphrase');
+      const iv = onlyLetters(values.iv);
+      if (iv && (iv.length !== 25 || new Set(iv).size !== 25)) {
+        throw new Error('Initialization vector must be exactly 25 distinct letters (or leave it blank if you are only decrypting).');
+      }
+      return { iv, passphrase };
+    },
+    keyInfo(key) { return `passphrase=${key.passphrase}${key.iv ? ` iv=${key.iv}` : ''}`; },
+    encrypt(pt, key) {
+      if (!key.iv || key.iv.length !== 25 || new Set(key.iv).size !== 25) {
+        throw new Error('Encrypting needs a 25-distinct-letter initialization vector.');
+      }
+      const state = mirdekSetup(key.iv, key.passphrase);
+      let st = state, ct = '';
+      for (const ch of pt) { const r = mirdekEncryptLetter(st, ch); st = r.state; ct += r.ctChar; }
+      return key.iv + ct;
+    },
+    decrypt(ct, key) {
+      if (ct.length < 26) throw new Error('Mirdek ciphertext must start with a 25-letter initialization vector, followed by at least one encrypted letter.');
+      const iv = ct.slice(0, 25);
+      if (new Set(iv).size !== 25) throw new Error('The first 25 letters of the ciphertext (the initialization vector) must be 25 distinct letters.');
+      const message = ct.slice(25);
+      const state = mirdekSetup(iv, key.passphrase);
+      let st = state, pt = '';
+      for (const ch of message) { const r = mirdekDecryptLetter(st, ch); st = r.state; pt += r.ptChar; }
+      return pt;
+    },
+  });
+
   // ===========================================================================
   // Internal helpers re-exported for the Visualizer (js/visualizer.js), so it
   // can reconstruct exactly the same tables / grids / permutations that
@@ -1781,6 +2091,27 @@
     CIPHERS,
     ALPHABET,
     mod,
+    SOLITAIRE_JOKER_A,
+    SOLITAIRE_JOKER_B,
+    solitaireUnkeyedDeck,
+    solitairePassphraseKey,
+    solitaireRoundTraced,
+    solitaireNextKeystreamValue,
+    solitaireCardValue,
+    solitaireKeystreamValue,
+    solitaireCardName,
+    solitaireAdd,
+    solitaireSub,
+    mirdekVal,
+    mirdekInit,
+    mirdekKeyPhase,
+    mirdekMixPhase,
+    mirdekSetup,
+    mirdekCountedCut,
+    mirdekCountedCutWithTrace,
+    mirdekDealAlternating,
+    mirdekLetterSearch,
+    mirdekDealN,
     letterNum,
     numLetter,
     chaoRotate,

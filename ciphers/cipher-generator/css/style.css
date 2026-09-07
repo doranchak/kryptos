@@ -262,6 +262,28 @@ td.mono, .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
 .viz-chao-tab.hl circle { fill: var(--accent); stroke: var(--accent); }
 .viz-chao-tab.hl text { fill: var(--accent-contrast); }
 
+/* ==== Playing-card tiles (Solitaire / Mirdek) ==== */
+.viz-card-row-label { font-size: 0.78rem; color: var(--text-muted); margin: 8px 0 3px; }
+.viz-card-row-label:first-child { margin-top: 0; }
+.viz-card-row {
+  display: flex; flex-wrap: wrap; gap: 3px; padding: 6px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--mono-bg);
+  margin-bottom: 8px;
+}
+.viz-card {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 40px; border-radius: 4px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.72rem; font-weight: 700;
+  color: var(--text); flex: 0 0 auto;
+}
+.viz-card.red { color: var(--error-text); }
+.viz-card.joker { background: var(--table-head); color: var(--text-muted); font-size: 0.62rem; }
+.viz-card.top { border-top: 3px solid var(--text-muted); }
+.viz-card.bottom { border-bottom: 3px solid var(--text-muted); }
+.viz-card.hl { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.viz-card.hl-soft { outline: 2px dashed var(--accent-hover); outline-offset: -2px; }
+
 @media (max-width: 900px) {
   .viz-detail-row { grid-template-columns: 1fr; }
   .viz-io-row { grid-template-columns: 1fr; }

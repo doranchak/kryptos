@@ -17,7 +17,7 @@
     'running_key', 'running_key_aca', 'running_key1', 'running_key2', 'running_key3', 'running_key4',
     'running_key_transposition', 'transposition_running_key',
     'vigenere', 'enigma', 'beaufort', 'porta', 'playfair',
-    'hill', 'scytale',
+    'hill', 'scytale', 'solitaire', 'mirdek',
   ];
 
   const CIPHER_HINTS = {
@@ -52,6 +52,8 @@
     playfair: 'Digraph substitution using a keyed 5x5 square (I/J merged); row/column/rectangle rules encrypt letter pairs.',
     hill: 'Linear algebra cipher: blocks of 2 or 3 letters are multiplied by an invertible matrix mod 26.',
     scytale: 'Plaintext is written across N columns and read down them in order — equivalent to columnar transposition with an unscrambled column order.',
+    solitaire: 'Bruce Schneier’s Solitaire (a.k.a. Pontifex, from Cryptonomicon): a 54-card deck (with 2 jokers) generates a keystream by moving the jokers, cutting around them, and cutting by the bottom card’s value, then reading off an output card; that keystream is added to the plaintext letter by letter.',
+    mirdek: 'Paul Crowley’s Mirdek: two 26-card piles (one per colour) are cut and dealt through each other during setup and encryption; each plaintext letter is found by dealing cards onto two alternating piles, and how many cards it took becomes the ciphertext letter. Ciphertext is 25 letters longer than the plaintext (a random initialization vector is prepended).',
   };
 
   let currentCipherId = CIPHER_ORDER[0];

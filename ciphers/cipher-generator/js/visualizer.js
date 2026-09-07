@@ -19,6 +19,9 @@
     keyedSymbolSequence, keywordColumnRanks, orderFromRanks, rangeArray,
     buildHomophoneTables, buildPolybiusSquare, buildTrifidCube, buildPlayfairGrid,
     matVecMul, buildEnigmaMachine, chaoStep,
+    SOLITAIRE_JOKER_A, SOLITAIRE_JOKER_B, solitairePassphraseKey, solitaireRoundTraced,
+    solitaireNextKeystreamValue, solitaireCardValue, solitaireKeystreamValue,
+    mirdekVal, mirdekSetup, mirdekCountedCutWithTrace, mirdekLetterSearch, mirdekDealN,
   } = CL;
 
   // ---------------------------------------------------------------------
@@ -748,6 +751,165 @@
     hoverCt(state, j) { const r = enigmaCommon(state, j); return { pt: [j], keyIds: r.keyIds, current: r.current }; },
   };
 
+  // ---------------------------------------------------------------------
+  // Playing-card tile helpers, shared by Solitaire and Mirdek.
+  // ---------------------------------------------------------------------
+  const SOLITAIRE_SUIT_SYMBOL = ['♣', '♦', '♥', '♠'];
+  const SOLITAIRE_RANK_LABEL = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  function solitaireShortLabel(c) {
+    if (c === SOLITAIRE_JOKER_A) return 'JOKER A';
+    if (c === SOLITAIRE_JOKER_B) return 'JOKER B';
+    const suitIdx = Math.floor((c - 1) / 13), rankIdx = (c - 1) % 13;
+    return SOLITAIRE_RANK_LABEL[rankIdx] + SOLITAIRE_SUIT_SYMBOL[suitIdx];
+  }
+  function solitaireColorClass(c) {
+    if (c === SOLITAIRE_JOKER_A || c === SOLITAIRE_JOKER_B) return 'joker';
+    const suitIdx = Math.floor((c - 1) / 13);
+    return (suitIdx === 0 || suitIdx === 3) ? '' : 'red'; // clubs/spades black (default), diamonds/hearts red
+  }
+  function cardTile(label, colorClass, extraClasses) {
+    const div = el('div', ('viz-card ' + colorClass + ' ' + (extraClasses || '')).trim());
+    div.textContent = label;
+    return div;
+  }
+  function renderCardRow(container, labelText, cards, colorClassFor, labelFor, markerFor) {
+    if (labelText) container.appendChild(el('div', 'viz-card-row-label', labelText));
+    const row = el('div', 'viz-card-row');
+    cards.forEach((c, i) => row.appendChild(cardTile(labelFor(c), colorClassFor(c), markerFor ? markerFor(c, i) : '')));
+    container.appendChild(row);
+  }
+
+  // ---- Solitaire (Pontifex) ----
+  ADAPTERS.solitaire = {
+    build(pt, ct, key) {
+      const deck = solitairePassphraseKey(key.passphrase);
+      const initialDeck = deck.slice();
+      const steps = [];
+      for (let i = 0; i < pt.length; i++) {
+        const { rounds, keystreamValue } = solitaireNextKeystreamValue(deck);
+        steps.push({ rounds, keystreamValue, deckAfter: deck.slice(), ptChar: pt[i], ctChar: ct[i] });
+      }
+      return { pt, ct, key, initialDeck, steps };
+    },
+    renderKeyPanel(container, state) {
+      container.appendChild(el('div', 'viz-subheading', 'Deck (54 cards, current top → bottom, left → right)'));
+      const host = el('div');
+      container.appendChild(host);
+      state.deckHost = host;
+      renderSolitaireDeck(host, null, state.initialDeck);
+      container.appendChild(el('p', 'viz-note',
+        'Hover a letter to see the deck once it has produced that keystream letter, with the output card ' +
+        'highlighted (and the top/bottom cards marked - they drive the next round’s count cut and output). ' +
+        'If a round’s output card was a joker, that round is skipped with no keystream letter and the whole ' +
+        'five-step process repeats immediately.'));
+    },
+    formulaTemplate: "K = output card's 1-26 value (both jokers and cards >26 fold down).  C = P + K, Solitaire's own 1-26 wraparound (add; subtract 26 only once the sum exceeds 26) - not plain mod-26 addition.",
+    hoverPt(state, idx) { return solitaireHoverAt(state, idx, true); },
+    hoverCt(state, idx) { return solitaireHoverAt(state, idx, false); },
+  };
+
+  function renderSolitaireDeck(host, step, fallbackDeck) {
+    host.innerHTML = '';
+    const lastRound = step ? step.rounds[step.rounds.length - 1] : null;
+    const deck = lastRound ? lastRound.afterCount : fallbackDeck;
+    const outIdx = lastRound ? lastRound.outIdx : -1;
+    const row = el('div', 'viz-card-row');
+    deck.forEach((card, i) => {
+      const extra = [];
+      if (i === 0) extra.push('top');
+      if (i === deck.length - 1) extra.push('bottom');
+      if (i === outIdx) extra.push('hl');
+      row.appendChild(cardTile(solitaireShortLabel(card), solitaireColorClass(card), extra.join(' ')));
+    });
+    host.appendChild(row);
+  }
+
+  function solitaireHoverAt(state, idx, isPt) {
+    const step = state.steps[idx];
+    renderSolitaireDeck(state.deckHost, step, state.initialDeck);
+    const last = step.rounds[step.rounds.length - 1];
+    const skipped = step.rounds.length - 1;
+    const lines = [];
+    if (skipped > 0) lines.push(`(${skipped} earlier round${skipped > 1 ? 's' : ''} this letter hit a joker and produced no output - retried automatically.)`);
+    lines.push(`Move Joker A down 1 card; move Joker B down 2 cards.`);
+    lines.push(`Triple-cut around the jokers.`);
+    lines.push(`Count cut: bottom card = ${solitaireShortLabel(last.bottomCard)} (value ${last.cutN}) → cut after the ${last.cutN}${ordinalSuffix(last.cutN)} card.`);
+    lines.push(`Output: top card = ${solitaireShortLabel(last.topCard)} (value ${last.topVal}) → count down to position ${last.topVal} → ${solitaireShortLabel(last.rawOutput)} → keystream value ${last.keystreamValue} ('${numLetter(last.keystreamValue - 1)}').`);
+    lines.push(`P='${step.ptChar}' + K='${numLetter(last.keystreamValue - 1)}' → C='${step.ctChar}'`);
+    const info = { current: lines.join('\n') };
+    if (isPt) info.ct = [idx]; else info.pt = [idx];
+    return info;
+  }
+  function ordinalSuffix(n) {
+    const j = n % 10, k = n % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
+  }
+
+  // ---- Mirdek ----
+  ADAPTERS.mirdek = {
+    build(pt, ct, key) {
+      const ivToUse = (key.iv && key.iv.length === 25) ? key.iv : onlyLetters(ct).slice(0, 25);
+      let st = mirdekSetup(ivToUse, key.passphrase);
+      const initialState = st;
+      const steps = [];
+      for (let i = 0; i < pt.length; i++) {
+        const cutTrace = mirdekCountedCutWithTrace(st);
+        const dealt = mirdekLetterSearch(cutTrace.state.left, pt[i]);
+        const after = { left: dealt.newLeft, right: cutTrace.state.right, discard: cutTrace.state.discard };
+        steps.push({ before: st, cutSteps: cutTrace.steps, afterCut: cutTrace.state, dealt, after, ptChar: pt[i], ctChar: ALPHABET[dealt.dealtCount - 1] });
+        st = after;
+      }
+      return { pt, ct, key, initialState, steps };
+    },
+    renderKeyPanel(container, state) {
+      const leftLabel = el('div'); const leftHost = el('div');
+      const rightLabel = el('div'); const rightHost = el('div');
+      const discardLabel = el('div'); const discardHost = el('div');
+      container.appendChild(el('div', 'viz-subheading', 'Piles'));
+      container.appendChild(leftHost);
+      container.appendChild(rightHost);
+      container.appendChild(discardHost);
+      state.leftHost = leftHost; state.rightHost = rightHost; state.discardHost = discardHost;
+      renderMirdekPiles(state, null);
+      container.appendChild(el('p', 'viz-note',
+        'Left and Discard are face-up (leftmost = top); Right is face-down, shown top-first here for easy ' +
+        'comparison. Hover a letter to see the piles once that letter has been processed, with the card that ' +
+        'was searched for highlighted in the Left pile.'));
+    },
+    formulaTemplate: 'Each letter: (1) a counted cut - draw Right’s top card, cut Left by its 1-26 value. (2) A letter search on Left for the plaintext letter; the number of cards dealt (as a letter, A=1) is the ciphertext.',
+    hoverPt(state, idx) { return mirdekHoverAt(state, idx, true); },
+    hoverCt(state, idx) { return mirdekHoverAt(state, idx, false); },
+  };
+
+  function mirdekCardColorClass(letter) { return letterNum(letter) < 13 ? '' : 'red'; }
+  function renderMirdekPiles(state, step) {
+    const snap = step ? step.after : state.initialState;
+    const targetIdx = step ? step.dealt.remaining.length : -1;
+    renderCardRow(state.leftHost, 'Left (top → bottom)', snap.left, mirdekCardColorClass, (c) => c, (c, i) => i === targetIdx ? 'hl' : (i === 0 ? 'top' : ''));
+    renderCardRow(state.rightHost, 'Right, face-down (top → bottom)', snap.right.slice().reverse(), mirdekCardColorClass, (c) => c, (c, i) => i === 0 ? 'top' : '');
+    renderCardRow(state.discardHost, 'Discard (top → bottom)', snap.discard, mirdekCardColorClass, (c) => c, (c, i) => i === 0 ? 'top' : '');
+  }
+
+  function mirdekHoverAt(state, idx, isPt) {
+    const step = state.steps[idx];
+    // clear hosts before redrawing (renderCardRow appends; hosts must start empty each hover)
+    state.leftHost.innerHTML = ''; state.rightHost.innerHTML = ''; state.discardHost.innerHTML = '';
+    renderMirdekPiles(state, step);
+    const lines = [];
+    step.cutSteps.forEach((cs, i) => {
+      const cascadeNote = cs.emptied ? ' → Right pile emptied, so pick up Discard as the new Left, put the old Left down as the new Right, and cut again' : '';
+      lines.push(`Counted cut${step.cutSteps.length > 1 ? ' (part ' + (i + 1) + ')' : ''}: drew '${cs.drawnCard}' (value ${cs.n}) from Right → moved the top ${cs.n} card${cs.n === 1 ? '' : 's'} of Left to its bottom.${cascadeNote}`);
+    });
+    lines.push(`Letter search on Left for '${step.ptChar}' (the plaintext letter): dealt ${step.dealt.dealtCount} card${step.dealt.dealtCount === 1 ? '' : 's'} onto two alternating piles (${step.dealt.pileA.length}/${step.dealt.pileB.length} cards) before it appeared.`);
+    lines.push(`Cards dealt = ${step.dealt.dealtCount} → ciphertext letter '${step.ctChar}'.  P='${step.ptChar}' ↔ C='${step.ctChar}'`);
+    const info = { current: lines.join('\n') };
+    if (isPt) info.ct = [idx]; else info.pt = [idx];
+    return info;
+  }
+
   // ---- Transposition family (columnar, double columnar, myszkowski, rail fence, scytale) ----
   function buildTransposition(kind) {
     return function build(pt, ct, key) {
@@ -1255,6 +1417,10 @@
     playfair: { values: { keyword: 'MONARCHY' } },
     hill: { values: { size: '2', matrix: '3,3\n2,5' } },
     scytale: { values: { faces: '5' } },
+    // schneier.com's own "Sample 3" passphrase.
+    solitaire: { values: { passphrase: 'CRYPTONOMICON' } },
+    // The exact IV/passphrase from the ciphergoth.org worked example.
+    mirdek: { values: { iv: 'IPDZOWKGSTVARMEQYBCFJNHUL', passphrase: 'KEYPHRASE' } },
   };
 
   // ---------------------------------------------------------------------
