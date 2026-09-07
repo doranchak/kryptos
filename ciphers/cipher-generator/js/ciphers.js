@@ -1573,15 +1573,22 @@
   };
 
   function buildEnigmaMachine(key) {
-    const rotors = key.rotors.map((name) => {
+    // key.rotors / key.ringSettings / key.initialPositions are stored LEFT TO
+    // RIGHT (matching the field labels, and the standard human/historical
+    // convention - e.g. Colossus's enigma_solver.c report, whose rotor[0] is
+    // documented as "the LEFTMOST wheel"). stepRotors()/encodeChar() below
+    // index [0]=right (fastest-stepping) .. [2]=left, so reverse once here at
+    // the boundary rather than reinterpreting every internal index.
+    const rotorNames = key.rotors.slice().reverse();
+    const rotors = rotorNames.map((name) => {
       const wiring = ROTOR_WIRING[name].split('').map(letterNum);
       const inverse = new Array(26);
       wiring.forEach((w, i) => { inverse[w] = i; });
       return { wiring, inverse, notch: letterNum(ROTOR_NOTCH[name]) };
     });
     const reflector = REFLECTOR_WIRING[key.reflector].split('').map(letterNum);
-    const positions = key.initialPositions.map(letterNum);
-    const rings = key.ringSettings.map((r) => r - 1);
+    const positions = key.initialPositions.slice().reverse().map(letterNum);
+    const rings = key.ringSettings.slice().reverse().map((r) => r - 1);
     const plugMap = new Array(26);
     for (let i = 0; i < 26; i++) plugMap[i] = i;
     (key.plugboard || []).forEach(([a, b]) => { const an = letterNum(a), bn = letterNum(b); plugMap[an] = bn; plugMap[bn] = an; });
@@ -1620,7 +1627,8 @@
       return numLetter(c);
     }
 
-    return { encodeChar, getPositions: () => positions.slice() };
+    // Report positions left-to-right too (reverse back), matching key.initialPositions.
+    return { encodeChar, getPositions: () => positions.slice().reverse() };
   }
 
   function enigmaProcess(text, key) {

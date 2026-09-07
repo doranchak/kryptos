@@ -137,8 +137,14 @@ against the official ACA worked example (`RunningKey.pdf` from
 cryptogram.org) — exact match — plus a check that `generator.js`'s
 preceding-text lookup is an exact, contiguous substring of the same corpus
 source immediately before the chosen plaintext. Enigma implements the
-standard
-Wehrmacht Enigma I rotor wirings (I-V), reflectors B/C, ring settings, and
-the classic double-step anomaly; it's internally self-reciprocal and
-structurally standard, but wasn't checked against an external
-known-ciphertext vector.
+standard Wehrmacht Enigma I rotor wirings (I-V), reflectors B/C, ring
+settings, and the classic double-step anomaly, and is checked against a real
+external vector: `scripts/fixtures/enigma_gillogly.{txt,solution}`, the
+well-known "Gillogly" M3 test cipher, decrypts to the exact German plaintext
+when given the settings an independent Enigma solver (the "colossus"
+project) reported for it. Rotors/rings/positions are entered left to right
+(the field labels' stated convention, and the convention colossus's own
+report uses) — this KAT is in fact what caught a real bug where the code
+silently treated array index 0 as the *rightmost* rotor while the label
+claimed "left to right"; see `scripts/test_ciphers.js` for the exact
+settings translation.

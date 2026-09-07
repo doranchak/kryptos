@@ -348,6 +348,34 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(CIPHERS.enigma.decrypt(ct, key), 'AAAAA', 'Enigma self-reciprocal round-trip');
 }
 
+// --- Enigma: the "Gillogly" M3 test cipher (a well-known Enigma-cracking test
+// vector - German naval-style message, plaintext ends "...der Fuehrer ist
+// tot. Der Kampf geht weiter. Doenitz."), cross-checked against a real
+// external Enigma solver (the "colossus" project's enigma_solver.c), whose
+// reported settings for this exact ciphertext were:
+//   M3 | reflector B | rotors II I III | rings AWD | pos BGI |
+//   plugs BL EZ IU JO MV PX RW
+// colossus's rotor[0] is documented as the LEFTMOST wheel and ring/pos are
+// 0-based-as-letters (A=0), matching this tool's "left to right" fields
+// exactly except ring settings, which this tool takes as 1-26 (so letter+1).
+// This is a genuine external validation - not just internal round-tripping -
+// and is what caught a real bug: buildEnigmaMachine() used to treat index 0
+// as the *rightmost* rotor while its field label claimed "left to right".
+{
+  const ct = fs.readFileSync(path.join(__dirname, 'fixtures', 'enigma_gillogly.txt'), 'utf8').trim();
+  const expectedPt = fs.readFileSync(path.join(__dirname, 'fixtures', 'enigma_gillogly.solution'), 'utf8').trim();
+  const values = {
+    rotors: 'II-I-III',
+    ringSettings: '1-23-4', // letters A,W,D (0-based) -> 1-based 1,23,4
+    initialPositions: 'BGI',
+    reflector: 'B',
+    plugboard: 'BL EZ IU JO MV PX RW',
+  };
+  const key = CIPHERS.enigma.keyFromValues(values);
+  const pt = CIPHERS.enigma.decrypt(ct, key);
+  assertEq(pt, expectedPt, 'Enigma decrypts the Gillogly M3 test cipher to the real German plaintext');
+}
+
 // --- ADFGX / ADFGVX / Bifid / Trifid / Myszkowski / Porta / Autokey / Running key / Scytale / Double columnar / Homophonic / Simple substitution round-trip already covered above generically ---
 
 console.log(`\n=== TOTAL: ${checks} checks, ${failures} failures ===`);
