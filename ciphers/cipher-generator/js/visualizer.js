@@ -227,10 +227,18 @@
     colAlphabet.forEach((ch, j) => { const th = document.createElement('th'); th.textContent = ch; registerHl('tq-col-' + j, th); hr.appendChild(th); });
     thead.appendChild(hr); table.appendChild(thead);
     const tbody = document.createElement('tbody');
+    // Rows are ordered by ctAlphabet itself (row k's key letter is ctAlphabet[k]),
+    // not by straight A-Z - so when ctAlphabet is keyed, the keyword's own letters
+    // lead the row order too, same as they already lead colAlphabet's column
+    // order. When ctAlphabet is straight (Quagmire/Running Key I, where the
+    // indicator is looked up in the straight alphabet), this is simply A-Z, so
+    // nothing changes for that variant. Row/cell ids key off k = the row's
+    // position within ctAlphabet, matching how each hover function computes it.
     for (let k = 0; k < 26; k++) {
       const tr = document.createElement('tr');
-      const shift = shiftForKey(ALPHABET[k]);
-      const rh = document.createElement('th'); rh.textContent = ALPHABET[k]; registerHl('tq-row-' + k, rh); tr.appendChild(rh);
+      const K = ctAlphabet[k];
+      const shift = shiftForKey(K);
+      const rh = document.createElement('th'); rh.textContent = K; registerHl('tq-row-' + k, rh); tr.appendChild(rh);
       for (let j = 0; j < 26; j++) {
         const td = document.createElement('td'); td.textContent = ctAlphabet[mod(shift + j, 26)];
         registerHl('tq-cell-' + k + '-' + j, td);
@@ -418,46 +426,54 @@
     const { variant, key, pt } = state;
     const p = pt[i];
     const ind = key.indicator; const indChar = ind[i % ind.length]; const indPos = i % ind.length;
-    const kn = letterNum(indChar);
-    const keyIds = [{ id: 'ind-' + indPos, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }];
+    const keyIds = [{ id: 'ind-' + indPos, cls: 'hl' }];
     let current;
+    // Tableau row ids key off the indicator letter's *position within
+    // ctAlphabet* (matching how renderAlphabetTableau now orders rows), which
+    // is `kn` (its straight A-Z index) when ctAlphabet is straight (variant I),
+    // or its already-computed M-position (posK/posK2) when ctAlphabet is keyed.
     if (variant === 'I') {
       const { M, Minv, anchor } = state;
       const posP = Minv[letterNum(p)];
+      const kn = letterNum(indChar);
       const idx = mod(kn - anchor + posP, 26);
-      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `M-position of P='${p}' is ${posP}.  indicator '${indChar}'=${kn}.  anchor(M-pos of 'A')=${anchor}.  idx=(${kn}−${anchor}+${posP}) mod 26=${idx}  →  C='${numLetter(idx)}'`;
     } else if (variant === 'II') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(indChar)];
       const pn = letterNum(p);
       const idx = mod(posK + pn, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + pn, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-row-' + posK, cls: 'hl-line' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + posK + '-' + pn, cls: 'hl' });
       current = `indicator '${indChar}' M-position=${posK}.  P='${p}' (${pn}, straight).  idx=(${posK}+${pn}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else if (variant === 'III') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(indChar)];
       const posP = Minv[letterNum(p)];
       const idx = mod(posK + posP, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-row-' + posK, cls: 'hl-line' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + posK + '-' + posP, cls: 'hl' });
       current = `indicator '${indChar}' M-position=${posK}.  P='${p}' M-position=${posP}.  idx=(${posK}+${posP}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else {
       const { M1, M1inv, M2, M2inv } = state;
       const posP1 = M1inv[letterNum(p)];
       const posK2 = M2inv[letterNum(indChar)];
       const idx = mod(posK2 + posP1, 26);
-      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP1, cls: 'hl' });
+      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-row-' + posK2, cls: 'hl-line' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + posK2 + '-' + posP1, cls: 'hl' });
       current = `P='${p}' M1-position=${posP1}.  indicator '${indChar}' M2-position=${posK2}.  idx=(${posK2}+${posP1}) mod 26=${idx}  →  C=M2[${idx}]='${M2[idx]}'`;
     }
     return { keyIds, current };
   }
 
-  const QUAGMIRE_TABLEAU_NOTE = {
-    I: 'Tableau: row = indicator letter, columns = keyed plaintext alphabet M, cell = the straight ciphertext letter that row/column produces.',
-    II: 'Tableau: row = indicator letter, columns = straight plaintext alphabet, cell = the keyed (M) ciphertext letter that row/column produces.',
-    III: 'Tableau: row = indicator letter, columns = the keyed alphabet M (same one used for plaintext and ciphertext), cell = the resulting ciphertext letter.',
-    IV: 'Tableau: row = indicator letter, columns = keyed plaintext alphabet M1, cell = the keyed (M2) ciphertext letter that row/column produces.',
-  };
+  function quagmireTableauNote(variant, keySourceLabel) {
+    if (variant === 'I') {
+      return `Tableau: row = ${keySourceLabel} letter (straight A-Z order - this variant looks up the ${keySourceLabel} letter's position in the straight alphabet, not a keyed one), columns = keyed plaintext alphabet M, cell = the straight ciphertext letter that row/column produces.`;
+    } else if (variant === 'II') {
+      return `Tableau: row = ${keySourceLabel} letter, ordered by the keyed ciphertext alphabet M (so the row for M's own first letter starts the keyword unrotated, same as the columns below), columns = straight plaintext alphabet, cell = the keyed (M) ciphertext letter that row/column produces.`;
+    } else if (variant === 'III') {
+      return `Tableau: row = ${keySourceLabel} letter, ordered by the keyed alphabet M (same one used for plaintext and ciphertext, and for the columns), columns = M as well, cell = the resulting ciphertext letter.`;
+    }
+    return `Tableau: row = ${keySourceLabel} letter, ordered by the keyed ciphertext alphabet M2 (so the row for M2's own first letter starts the keyword unrotated), columns = keyed plaintext alphabet M1, cell = the keyed (M2) ciphertext letter that row/column produces.`;
+  }
 
   function renderQuagmireLikeTableau(container, state, registerHl, keySourceLabel) {
     container.appendChild(el('div', 'viz-subheading', 'Tableau (every possible ' + keySourceLabel + ' letter)'));
@@ -470,7 +486,7 @@
     } else {
       renderAlphabetTableau(container, state.M1, state.M2, (K) => state.M2inv[letterNum(K)], registerHl);
     }
-    container.appendChild(el('p', 'viz-note', QUAGMIRE_TABLEAU_NOTE[state.variant]));
+    container.appendChild(el('p', 'viz-note', quagmireTableauNote(state.variant, keySourceLabel)));
   }
 
   function renderQuagmirePanel(container, state, registerHl) {
@@ -533,35 +549,38 @@
     const { variant, pt, keystream } = state;
     const p = pt[i];
     const kch = keystream[i];
-    const kn = letterNum(kch);
-    const keyIds = [{ id: 'kt-' + i, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }];
+    const keyIds = [{ id: 'kt-' + i, cls: 'hl' }];
     let current;
+    // Tableau row ids key off the running-key letter's *position within
+    // ctAlphabet* (matching how renderAlphabetTableau now orders rows) - see
+    // the matching comment in quagmireHoverAt above.
     if (variant === 'I') {
       const { M, Minv, anchor } = state;
       const posP = Minv[letterNum(p)];
+      const kn = letterNum(kch);
       const idx = mod(kn - anchor + posP, 26);
-      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posP, cls: 'hl' }, { id: 'S-' + idx, cls: 'hl' }, { id: 'tq-row-' + kn, cls: 'hl-line' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
       current = `M-position of P='${p}' is ${posP}.  running key '${kch}'=${kn}.  anchor(M-pos of 'A')=${anchor}.  idx=(${kn}−${anchor}+${posP}) mod 26=${idx}  →  C='${numLetter(idx)}'`;
     } else if (variant === 'II') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(kch)];
       const pn = letterNum(p);
       const idx = mod(posK + pn, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + pn, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'S-' + pn, cls: 'hl' }, { id: 'tq-row-' + posK, cls: 'hl-line' }, { id: 'tq-col-' + pn, cls: 'hl-line' }, { id: 'tq-cell-' + posK + '-' + pn, cls: 'hl' });
       current = `running key '${kch}' M-position=${posK}.  P='${p}' (${pn}, straight).  idx=(${posK}+${pn}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else if (variant === 'III') {
       const { M, Minv } = state;
       const posK = Minv[letterNum(kch)];
       const posP = Minv[letterNum(p)];
       const idx = mod(posK + posP, 26);
-      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP, cls: 'hl' });
+      keyIds.push({ id: 'M-' + posK, cls: 'hl-line' }, { id: 'M-' + posP, cls: 'hl-line' }, { id: 'M-' + idx, cls: 'hl' }, { id: 'tq-row-' + posK, cls: 'hl-line' }, { id: 'tq-col-' + posP, cls: 'hl-line' }, { id: 'tq-cell-' + posK + '-' + posP, cls: 'hl' });
       current = `running key '${kch}' M-position=${posK}.  P='${p}' M-position=${posP}.  idx=(${posK}+${posP}) mod 26=${idx}  →  C=M[${idx}]='${M[idx]}'`;
     } else {
       const { M1, M1inv, M2, M2inv } = state;
       const posP1 = M1inv[letterNum(p)];
       const posK2 = M2inv[letterNum(kch)];
       const idx = mod(posK2 + posP1, 26);
-      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + kn + '-' + posP1, cls: 'hl' });
+      keyIds.push({ id: 'M1-' + posP1, cls: 'hl' }, { id: 'M2-' + posK2, cls: 'hl' }, { id: 'M2-' + idx, cls: 'hl' }, { id: 'tq-row-' + posK2, cls: 'hl-line' }, { id: 'tq-col-' + posP1, cls: 'hl-line' }, { id: 'tq-cell-' + posK2 + '-' + posP1, cls: 'hl' });
       current = `P='${p}' M1-position=${posP1}.  running key '${kch}' M2-position=${posK2}.  idx=(${posK2}+${posP1}) mod 26=${idx}  →  C=M2[${idx}]='${M2[idx]}'`;
     }
     return { keyIds, current };
