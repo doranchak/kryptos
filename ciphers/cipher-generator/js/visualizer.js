@@ -22,7 +22,7 @@
     SOLITAIRE_JOKER_A, SOLITAIRE_JOKER_B, solitairePassphraseKey, solitaireRoundTraced,
     solitaireNextKeystreamValue, solitaireCardValue, solitaireKeystreamValue,
     mirdekVal, mirdekSetup, mirdekCountedCutWithTrace, mirdekLetterSearch, mirdekDealN,
-    moveToFront, moveToBack,
+    moveToFront, moveToBack, dynSubInit, dynSubSwap,
   } = CL;
 
   // ---------------------------------------------------------------------
@@ -487,6 +487,77 @@
   }
   ADAPTERS.move_to_front = makeMoveToEndAdapter(moveToFront, 'front');
   ADAPTERS.move_to_back = makeMoveToEndAdapter(moveToBack, 'back');
+
+  // ---- Dynamic Substitution (Ritter) ----
+  function buildDynSub(pt, ct, key) {
+    const state = dynSubInit(key.alphabetKeyword);
+    const initialTable = state.table.slice();
+    const confusion = key.confusionKeyword;
+    const steps = [];
+    for (let i = 0; i < pt.length; i++) {
+      const x = letterNum(pt[i]);
+      const j = letterNum(confusion[i % confusion.length]);
+      steps.push({
+        tableBefore: state.table.slice(),
+        x, j,
+        confusionChar: confusion[i % confusion.length],
+        ptChar: pt[i], ctChar: ct[i],
+      });
+      dynSubSwap(state, x, j);
+    }
+    return { pt, ct, key, initialTable, steps };
+  }
+  // Two aligned rows: top = fixed reference plain alphabet A-Z, bottom = that
+  // position's current cipher image. xIdx (the letter just used, solid
+  // highlight) takes priority over jIdx (its confusion-keyword swap partner,
+  // soft highlight) so a self-swap (x === j) never stacks both classes on one
+  // cell - see the Move-to-Front/Back fix for why that combination is unsafe.
+  function renderDynSubTable(host, table, xIdx, jIdx) {
+    host.innerHTML = '';
+    const topRow = el('div', 'viz-strip-row');
+    const botRow = el('div', 'viz-strip-row');
+    for (let i = 0; i < 26; i++) {
+      const top = cell(numLetter(i));
+      const bot = cell(table[i]);
+      if (i === xIdx) { top.classList.add('hl'); bot.classList.add('hl'); }
+      else if (i === jIdx) { top.classList.add('hl-soft'); bot.classList.add('hl-soft'); }
+      topRow.appendChild(top);
+      botRow.appendChild(bot);
+    }
+    host.appendChild(topRow);
+    host.appendChild(botRow);
+  }
+  function dynSubHoverAt(state, idx, isPt) {
+    const step = state.steps[idx];
+    renderDynSubTable(state.tableHost, step.tableBefore, step.x, step.j);
+    const info = {
+      current: `Plain '${step.ptChar}' (column ${step.x}) currently maps to '${step.ctChar}' → C = '${step.ctChar}'. ` +
+        `Confusion keyword gives j=${step.j} ('${step.confusionChar}') here. ` +
+        (step.x === step.j
+          ? `x = j, so the swap trades column ${step.x} with itself - no change this step.`
+          : `Swap table[${step.x}] and table[${step.j}]: those two columns trade places, so '${step.ptChar}' maps to a different letter next time.`),
+    };
+    if (isPt) info.ct = [idx]; else info.pt = [idx];
+    return info;
+  }
+  ADAPTERS.dynamic_substitution = {
+    build: buildDynSub,
+    renderKeyPanel(container, state) {
+      container.appendChild(el('div', 'viz-subheading', 'Substitution table (top = plain A-Z, bottom = current cipher image)'));
+      const host = el('div');
+      container.appendChild(host);
+      state.tableHost = host;
+      renderDynSubTable(host, state.initialTable, -1, -1);
+      container.appendChild(el('p', 'viz-note',
+        'Hover a letter to see the table exactly as it stood before that letter was looked up, with the plaintext ' +
+        "letter's column highlighted (solid) alongside its swap partner's column, given by the confusion keyword " +
+        "cycling like a repeating key (soft highlight). After every letter those two table entries trade places, so " +
+        'the table keeps re-arranging itself as encryption proceeds - Terry Ritter\'s "Dynamic Substitution Combiner."'));
+    },
+    formulaTemplate: 'C = table[P] (top row = fixed plain A-Z, P = column index); j = confusion-keyword letter here (cycled like Vigenère). Then swap table[P] and table[j].',
+    hoverPt(state, idx) { return dynSubHoverAt(state, idx, true); },
+    hoverCt(state, idx) { return dynSubHoverAt(state, idx, false); },
+  };
 
   // ---- Vigenere-family (vigenere, beaufort, porta, autokey, running_key, running_key_aca) ----
   const VIG_FORMULA = {
@@ -1450,6 +1521,7 @@
     chaocipher: { values: { leftAlphabet: 'XLEMFHIWOVNYRUDQCJPASGBTKZ', rightAlphabet: 'SGLBIZHJMFTRXAVKNQPDWYCUOE' } },
     move_to_front: { values: { keyword: 'SHADOW' } },
     move_to_back: { values: { keyword: 'SHADOW' } },
+    dynamic_substitution: { values: { alphabetKeyword: 'PALIMPSEST', confusionKeyword: 'SHUFFLE' } },
     autokey: { values: { primer: 'KRYPTOS' } },
     columnar_transposition: { values: { keyword: 'ZEBRAS' } },
     double_columnar_transposition: { values: { keyword1: 'ZEBRAS', keyword2: 'CIPHER' } },

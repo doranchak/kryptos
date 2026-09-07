@@ -12,14 +12,14 @@ is embedded directly into the page via `js/data/*.js`.
 
 ## Features
 
-- **35 cipher types**: simple substitution, homophonic substitution,
+- **36 cipher types**: simple substitution, homophonic substitution,
   **Chaocipher**, **Move-to-Front substitution**, **Move-to-Back
-  substitution**, autokey, columnar transposition, double columnar
-  transposition, rail fence, Myszkowski transposition, ADFGX, ADFGVX, bifid,
-  trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**, **Running Key
-  I-IV**, **running key + transposition**, **transposition + running key**,
-  Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale, **Solitaire
-  (Pontifex)**, **Mirdek**.
+  substitution**, **Dynamic Substitution**, autokey, columnar transposition,
+  double columnar transposition, rail fence, Myszkowski transposition, ADFGX,
+  ADFGVX, bifid, trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**,
+  **Running Key I-IV**, **running key + transposition**, **transposition +
+  running key**, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale,
+  **Solitaire (Pontifex)**, **Mirdek**.
   - Move-to-Front / Move-to-Back substitution: a single keyed 26-letter
     alphabet acts as a self-modifying substitution table. To encrypt
     plaintext letter P, find P's current position in that alphabet (0-25) —
@@ -28,6 +28,18 @@ is embedded directly into the page via `js/data/*.js`.
     shifting the letters in between to fill the gap. Frequently-used letters
     drift toward the front (or back), so the effective shift changes with
     every single letter — a "self-organizing list" turned into a cipher.
+  - Dynamic Substitution (Terry Ritter, 1990, "The Dynamic Substitution
+    Combiner"): a keyed substitution table maps each plaintext letter to a
+    ciphertext letter, exactly like ordinary simple substitution — except
+    that after every letter, the table entry just used is swapped with the
+    table entry at a second position, taken from a separate confusion
+    keyword that cycles like a repeating Vigenère key. The confusion keyword
+    stands in for Ritter's synchronized pseudo-random "Random In" stream —
+    both encrypting and decrypting only need the same two keywords to
+    reproduce the identical sequence of swaps, with no separate keystream to
+    exchange. The table keeps re-arranging itself one exchange per letter,
+    which is Ritter's whole point: the substitution never has a chance to
+    settle down long enough for frequency analysis to characterize it.
   - Chaocipher (John F. Byrne): two 26-letter "disks" - a left (ciphertext)
     and right (plaintext) alphabet - that dynamically permute after every
     single letter (each disk rotates to bring the letter just used to
@@ -114,7 +126,11 @@ is embedded directly into the page via `js/data/*.js`.
   it draws the full 26-letter alphabet strip, redrawn on every hover to
   exactly how it stood *before* that letter was looked up, with the used
   position highlighted so the front-ward (or back-ward) drift is visible
-  letter by letter.
+  letter by letter. For Dynamic Substitution it draws the substitution table
+  as two aligned rows (fixed plain A-Z on top, current cipher image below),
+  redrawn on every hover to that letter's exact table state, with the
+  plaintext letter's column and its confusion-keyword swap partner's column
+  both picked out.
 
 Note: the target length governs the *plaintext* letter count that gets
 selected, not necessarily the final ciphertext length — ciphers that
@@ -221,3 +237,17 @@ checked against a small hand-worked vector chosen so the arithmetic is easy
 to verify by hand: keyword `ABC` (which keys to a plain, unshifted A-Z
 starting alphabet) encrypting `BANANA`, independently derived twice for both
 MTF and MTB and locked in as a permanent KAT in `scripts/test_ciphers.js`.
+Dynamic Substitution implements the mechanism described in Terry Ritter's
+peer-reviewed paper, "Substitution Cipher with Pseudo-Random Shuffling: The
+Dynamic Substitution Combiner," *Cryptologia* 14(4): 289-303 (1990) (full
+text at [ciphersbyritter.com/ARTS/DYNSUB2.HTM](http://www.ciphersbyritter.com/ARTS/DYNSUB2.HTM)) —
+specifically its core table-and-inverse exchange rule (the paper's own
+worked example uses a true random number generator for the exchange index,
+which this offline tool replaces with a second, independently-keyed
+confusion stream so the same two keywords always reproduce the same
+ciphertext). Correctness is checked the same way as MTF/MTB: a hand-worked
+vector with both keywords set to `ABC` (`BANANA` -> `BBNACA`), independently
+cross-checked against a throwaway script before being locked in as a
+permanent KAT in `scripts/test_ciphers.js`, plus a longer round-trip check
+with independent, differently-sized keywords to confirm the confusion
+keyword's cycling wraps correctly.

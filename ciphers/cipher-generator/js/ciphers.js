@@ -390,6 +390,87 @@
   registerMoveToEnd('move_to_back', 'Move-to-Back Substitution', moveToBack);
 
   // ---------------------------------------------------------------------
+  // Dynamic Substitution (Terry Ritter, "Substitution Cipher with
+  // Pseudo-Random Shuffling: The Dynamic Substitution Combiner," Cryptologia
+  // 14(4): 289-303, 1990). A substitution table `table` (plain letter ->
+  // cipher letter, initially the alphabet keyword's keyed alphabet) works
+  // like ordinary simple substitution, but after every letter it is
+  // re-arranged: the table entry just used (at the plaintext letter's
+  // position) is exchanged with the entry at a second position - Ritter's
+  // "Random In" port. Here that second position comes from cycling a second,
+  // independent keyword letter by letter (like a repeating Vigenere key) -
+  // a concrete, reproducible stand-in for the synchronized pseudo-random
+  // confusion stream Ritter's design calls for: both encrypt and decrypt
+  // need only the same two keywords to regenerate the identical sequence of
+  // exchanges in lockstep, with no separate key-exchange problem. The
+  // inverse table `inv` is kept in sync with the same swap rather than
+  // rebuilt from scratch each step - Ritter's own point that dynamic
+  // substitution needs both the table and its inverse present throughout,
+  // even though only one is used to move data on either end.
+  // ---------------------------------------------------------------------
+  function dynSubInit(alphabetKeyword) {
+    const table = keyedAlphabet26(alphabetKeyword).split(''); // table[x] = cipher letter for plain letter x
+    const inv = new Array(26); // inv[y] = plain letter for cipher letter y
+    table.forEach((ch, x) => { inv[letterNum(ch)] = numLetter(x); });
+    return { table, inv };
+  }
+  function dynSubSwap(state, x, j) {
+    const y = state.table[x];
+    const yj = state.table[j];
+    state.table[x] = yj;
+    state.table[j] = y;
+    state.inv[letterNum(yj)] = numLetter(x);
+    state.inv[letterNum(y)] = numLetter(j);
+  }
+  function dynSubEncrypt(pt, alphabetKeyword, confusionKeyword) {
+    const state = dynSubInit(alphabetKeyword);
+    let out = '';
+    for (let i = 0; i < pt.length; i++) {
+      const x = letterNum(pt[i]);
+      const y = state.table[x];
+      out += y;
+      const j = letterNum(confusionKeyword[i % confusionKeyword.length]);
+      dynSubSwap(state, x, j);
+    }
+    return out;
+  }
+  function dynSubDecrypt(ct, alphabetKeyword, confusionKeyword) {
+    const state = dynSubInit(alphabetKeyword);
+    let out = '';
+    for (let i = 0; i < ct.length; i++) {
+      const y = ct[i];
+      const p = state.inv[letterNum(y)];
+      out += p;
+      const x = letterNum(p);
+      const j = letterNum(confusionKeyword[i % confusionKeyword.length]);
+      dynSubSwap(state, x, j);
+    }
+    return out;
+  }
+  register({
+    id: 'dynamic_substitution',
+    label: 'Dynamic Substitution (Ritter)',
+    fields: [
+      { name: 'alphabetKeyword', label: 'Alphabet keyword (builds the starting substitution table)', type: 'text', placeholder: 'e.g. PALIMPSEST' },
+      { name: 'confusionKeyword', label: 'Confusion keyword (drives the swap at each step; cycles like a Vigenère key)', type: 'text', placeholder: 'e.g. SHUFFLE' },
+    ],
+    randomKey() {
+      const [alphabetKeyword, confusionKeyword] = pickDistinctDictionaryWords(2, 5, 9);
+      return { key: { alphabetKeyword, confusionKeyword }, values: { alphabetKeyword, confusionKeyword } };
+    },
+    keyFromValues(values) {
+      const alphabetKeyword = onlyLetters(values.alphabetKeyword);
+      const confusionKeyword = onlyLetters(values.confusionKeyword);
+      validateLength(alphabetKeyword, 'Alphabet keyword');
+      validateLength(confusionKeyword, 'Confusion keyword');
+      return { alphabetKeyword, confusionKeyword };
+    },
+    keyInfo(key) { return `alphabet=${key.alphabetKeyword}, confusion=${key.confusionKeyword}`; },
+    encrypt(pt, key) { return dynSubEncrypt(pt, key.alphabetKeyword, key.confusionKeyword); },
+    decrypt(ct, key) { return dynSubDecrypt(ct, key.alphabetKeyword, key.confusionKeyword); },
+  });
+
+  // ---------------------------------------------------------------------
   // Vigenere / Beaufort / Porta / Autokey / Running key (all straight-alphabet,
   // repeating- or extending-key polyalphabetic ciphers)
   // ---------------------------------------------------------------------
@@ -2188,6 +2269,8 @@
     chaoStep,
     moveToFront,
     moveToBack,
+    dynSubInit,
+    dynSubSwap,
     onlyLetters,
     randInt,
     randChoice,

@@ -348,6 +348,28 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(CIPHERS.move_to_back.decrypt(ctB, key), 'BANANA', 'Move-to-Back decrypt round-trip');
 }
 
+// --- Dynamic Substitution (Ritter), hand-worked vector. Keywords "ABC" for
+// both the alphabet and confusion streams collapse the starting table to
+// straight A-Z and the "random" exchange index to a simple 0,1,2-repeating
+// cycle, so the swap-by-swap arithmetic can be checked by hand: plaintext
+// "BANANA" -> ciphertext "BBNACA" (worked by hand and cross-checked with an
+// independent script before being locked in here; see the chat transcript /
+// project notes for the full derivation). ---
+{
+  const key = { alphabetKeyword: 'ABC', confusionKeyword: 'ABC' };
+  const ct = CIPHERS.dynamic_substitution.encrypt('BANANA', key);
+  assertEq(ct, 'BBNACA', 'Dynamic Substitution hand-worked vector (BANANA)');
+  assertEq(CIPHERS.dynamic_substitution.decrypt(ct, key), 'BANANA', 'Dynamic Substitution decrypt round-trip');
+
+  // A second, longer round-trip with independent alphabet/confusion keywords
+  // (and confusion shorter than the plaintext, so it wraps/cycles) guards
+  // against the swap accidentally being symmetric only for short/matched keys.
+  const key2 = { alphabetKeyword: 'PALIMPSEST', confusionKeyword: 'FEZ' };
+  const pt2 = 'BETWEENSUBTLESHADINGANDTHEABSENCEOFLIGHTLIESTHENUANCEOFIQLUSION';
+  const ct2 = CIPHERS.dynamic_substitution.encrypt(pt2, key2);
+  assertEq(CIPHERS.dynamic_substitution.decrypt(ct2, key2), pt2, 'Dynamic Substitution decrypt round-trip (longer text, cycling confusion key)');
+}
+
 // --- Vigenere textbook vector ---
 {
   const key = { keyword: 'LEMON' };
