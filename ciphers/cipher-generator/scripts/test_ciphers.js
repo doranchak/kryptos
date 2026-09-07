@@ -207,6 +207,56 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertTrue(checked > 0, 'precedingText coverage check ran at least once');
 }
 
+// --- generator.js: pickForCiphertextLength must never produce a ciphertext
+// longer than the requested target length, for every registered cipher -
+// including the ones that fractionate/expand (Homophonic, ADFGX, ADFGVX,
+// x2), pad to a block size (Hill) or insert content-dependent fillers
+// (Playfair), and add fixed overhead (Mirdek's 25-letter IV). Ciphers whose
+// plaintext:ciphertext length relationship is an exact, content-independent
+// ratio (the large majority - simple substitution, Vigenere-family,
+// transposition-family, Bifid/Trifid, etc., plus Homophonic/ADFGX/ADFGVX's
+// exact x2 and Mirdek's exact +25) must hit the target exactly whenever it's
+// achievable at all (an odd target for a x2 cipher, or a target under
+// Mirdek's 25-letter floor, can only be undershot, never hit exactly - the
+// hard requirement is still that it's never exceeded). Playfair/Hill's
+// padding depends on the actual letters chosen, so only "never exceeds, and
+// isn't wildly short" is checked for those. ---
+{
+  const G = global.CipherGenerator;
+  const CIPHERS_ALL = global.CipherLib.CIPHERS;
+  const EXACT_RATIO2 = new Set(['homophonic_substitution', 'adfgx', 'adfgvx']);
+  const VARIABLE_OVERHEAD = new Set(['playfair', 'hill']);
+  const targets = [40, 61, 97]; // includes an odd target to stress ratio-2 ciphers' parity limit
+
+  for (const id of Object.keys(CIPHERS_ALL)) {
+    const def = CIPHERS_ALL[id];
+    for (const target of targets) {
+      if (id === 'mirdek' && target <= 25) continue; // below Mirdek's fixed IV floor - not achievable at all, correctly returns null
+      const found = G.pickForCiphertextLength(def, id, target, 30);
+      assertTrue(!!found, `${id}: pickForCiphertextLength(${target}) found a usable plaintext/key/ciphertext`);
+      if (!found) continue;
+      assertTrue(found.ciphertext.length <= target, `${id}: ciphertext length (${found.ciphertext.length}) must never exceed the target (${target})`);
+      if (EXACT_RATIO2.has(id)) {
+        const bestPossible = target % 2 === 0 ? target : target - 1;
+        assertEq(found.ciphertext.length, bestPossible, `${id}: exact x2 ratio should hit ${bestPossible} for target ${target}`);
+      } else if (id === 'mirdek') {
+        assertEq(found.ciphertext.length, target, `${id}: exact +25 offset should hit the target exactly (${target})`);
+      } else if (!VARIABLE_OVERHEAD.has(id)) {
+        assertEq(found.ciphertext.length, target, `${id}: exact 1:1 ratio should hit the target exactly (${target})`);
+      } else {
+        assertTrue(found.ciphertext.length >= target - 5, `${id}: content-dependent padding should still land close to the target (${target}), got ${found.ciphertext.length}`);
+      }
+      // (Not re-checked here: decrypt(returned ciphertext) reproducing the
+      // returned plaintext exactly - that's the existing generic round-trip
+      // suite's job above, and on arbitrary corpus text several ciphers have
+      // known, pre-existing lossy edge cases unrelated to length-targeting
+      // - Playfair/ADFGX/Bifid merge J into I, Playfair inserts fillers for
+      // double letters/odd length, and Hill's block padding survives into
+      // decrypt's output - so it's not a valid universal invariant here.)
+    }
+  }
+}
+
 // --- Running Key I-IV cross-checked against the already-verified Quagmire
 // I-IV vectors above: for a plaintext no longer than the indicator word,
 // `indicator[i % indicator.length] === indicator[i]` for every position, so

@@ -72,9 +72,13 @@
       <button id="cancelBtn" type="button" class="btn-secondary" hidden>Cancel</button>
       <button id="exportCsvBtn" type="button" class="btn-secondary" disabled>Export CSV</button>
     </div>
-    <p class="hint">The target length is the number of <em>plaintext</em> letters selected (no spaces). Ciphers that
-      fractionate or expand text (Homophonic, ADFGX, ADFGVX) will produce a longer final ciphertext; Hill and
-      Playfair may pad by a letter or two.</p>
+    <p class="hint">The target length is the desired final <em>ciphertext</em> length; the generator works backward to
+      figure out how much plaintext to select so the ciphertext comes out at that length, so ciphers that
+      fractionate or expand text (Homophonic, ADFGX, ADFGVX roughly halve the plaintext needed) or add fixed
+      overhead (Mirdek's 25-letter IV) get proportionally less plaintext, not a longer ciphertext. The ciphertext
+      length never exceeds the target; a handful of ciphers can't always hit it exactly (Homophonic/ADFGX/ADFGVX
+      only land on even targets exactly; Playfair's double-letter fillers and Hill's block padding depend on the
+      actual letters chosen) and may come in a little under instead.</p>
 
     <div id="genProgress" class="progress" hidden>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -91,7 +95,7 @@
             <th>Key information</th>
             <th>Ciphertext</th>
             <th>Plaintext</th>
-            <th class="col-len">Len</th>
+            <th class="col-len">CT Len</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>

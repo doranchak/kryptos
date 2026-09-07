@@ -8,18 +8,10 @@
 
   const { CIPHERS, onlyLetters } = window.CipherLib;
 
-  // Dropdown order mirrors the cipher list as specified for this tool.
-  const CIPHER_ORDER = [
-    'simple_substitution', 'homophonic_substitution', 'chaocipher',
-    'move_to_front', 'move_to_back', 'dynamic_substitution', 'autokey',
-    'columnar_transposition', 'double_columnar_transposition', 'rail_fence',
-    'myszkowski', 'adfgx', 'adfgvx', 'bifid', 'trifid',
-    'quagmire1', 'quagmire2', 'quagmire3', 'quagmire4',
-    'running_key', 'running_key_aca', 'running_key1', 'running_key2', 'running_key3', 'running_key4',
-    'running_key_transposition', 'transposition_running_key',
-    'vigenere', 'enigma', 'beaufort', 'porta', 'playfair',
-    'hill', 'scytale', 'solitaire', 'mirdek',
-  ];
+  // Dropdown order: every registered cipher id, sorted alphabetically by its
+  // display label (so newly-registered ciphers show up automatically,
+  // without needing to be added to a hand-maintained list here).
+  const CIPHER_ORDER = Object.keys(CIPHERS).sort((a, b) => CIPHERS[a].label.localeCompare(CIPHERS[b].label));
 
   const CIPHER_HINTS = {
     simple_substitution: 'Each plaintext letter always maps to the same cipher letter; the cipher alphabet is a fixed permutation of A-Z.',
@@ -242,7 +234,7 @@
         <td class="cell-key mono">${escapeHtml(r.keyInfo)}</td>
         <td class="cell-cipher mono">${escapeHtml(truncate(r.ciphertext, 220))}</td>
         <td class="cell-cipher">${escapeHtml(truncate(r.plaintextWithSpaces, 220))}</td>
-        <td class="col-len">${r.plaintextNoSpaces.length}</td>
+        <td class="col-len">${r.ciphertext.length}</td>
       `;
       resultsBody.appendChild(tr);
     }
@@ -294,7 +286,7 @@
         exportCsvBtn.disabled = results.length === 0;
         genSummary.textContent = wasCancelled
           ? `Cancelled. ${results.length} ciphers generated before stopping.`
-          : `Generated ${results.length} ciphers` + (skipped ? ` (${skipped} skipped: no matching passage found for the target length).` : '.');
+          : `Generated ${results.length} ciphers` + (skipped ? ` (${skipped} skipped: could not find a plaintext that reaches the target ciphertext length).` : '.');
         renderPage();
       },
       onError: (e) => {

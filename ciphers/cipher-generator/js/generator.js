@@ -106,6 +106,78 @@
   }
 
   // ---------------------------------------------------------------------
+  // Per-cipher expansion model: how ciphertext length relates to plaintext
+  // length, used only to seed a good first guess for the plaintext length
+  // that will hit a *ciphertext* length target (see pickForCiphertextLength
+  // below, which then verifies/corrects against the real encrypt() output -
+  // so this table only needs to be approximately right, not exact; ciphers
+  // with content-dependent padding, like Playfair and Hill, are fine left
+  // at the 1:1 default and get corrected by the search itself).
+  // ---------------------------------------------------------------------
+  const LENGTH_MODEL = {
+    homophonic_substitution: { ratio: 2, offset: 0 }, // always exactly 2 digits per letter
+    adfgx: { ratio: 2, offset: 0 },                    // always exactly 2 coordinate letters per letter
+    adfgvx: { ratio: 2, offset: 0 },
+    mirdek: { ratio: 1, offset: 25 },                  // 25-letter IV always prepended to the ciphertext
+  };
+  const DEFAULT_LENGTH_MODEL = { ratio: 1, offset: 0 };
+
+  function estimatePlaintextLength(cipherId, targetCiphertextLength) {
+    const { ratio, offset } = LENGTH_MODEL[cipherId] || DEFAULT_LENGTH_MODEL;
+    return Math.max(1, Math.round((targetCiphertextLength - offset) / ratio));
+  }
+
+  // ---------------------------------------------------------------------
+  // Pick a (plaintext, key, ciphertext) triple whose ciphertext length is
+  // exactly `targetCiphertextLength` when achievable, and never longer.
+  // Starting from the LENGTH_MODEL estimate above, repeatedly pick a
+  // whole-word plaintext of the current guessed length, encrypt it for
+  // real, and correct the guess from the measured ciphertext length -
+  // exact-ratio ciphers (most of them) converge on the first try;
+  // content-dependent ones (Playfair's double-letter fillers, Hill's
+  // block-size padding) take a few more. The longest ciphertext seen that
+  // does not exceed the target is kept as a fallback in case the target
+  // can never be hit exactly (e.g. an odd target for a ratio-2 cipher like
+  // Homophonic/ADFGX/ADFGVX, or a target shorter than Mirdek's fixed
+  // 25-letter IV overhead).
+  // ---------------------------------------------------------------------
+  function pickForCiphertextLength(def, cipherId, targetCiphertextLength, maxAttempts) {
+    maxAttempts = maxAttempts || 20;
+    let guessLen = estimatePlaintextLength(cipherId, targetCiphertextLength);
+    const triedLengths = new Set();
+    let best = null;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (guessLen < 1) break;
+      while (guessLen > 1 && triedLengths.has(guessLen)) guessLen--;
+      if (triedLengths.has(guessLen)) break;
+      triedLengths.add(guessLen);
+
+      const seq = pickPlaintextSequence(guessLen);
+      if (!seq) { guessLen--; continue; }
+      const ptNoSpaces = seq.words.join('');
+      let key, values, ciphertext;
+      try {
+        const rk = def.randomKey({ ptLength: ptNoSpaces.length, precedingText: seq.precedingText });
+        key = rk.key; values = rk.values;
+        ciphertext = def.encrypt(ptNoSpaces, key);
+      } catch (e) {
+        guessLen--;
+        continue;
+      }
+
+      const candidate = { seq, ptNoSpaces, key, values, ciphertext };
+      if (ciphertext.length === targetCiphertextLength) return candidate;
+      if (ciphertext.length < targetCiphertextLength) {
+        if (!best || ciphertext.length > best.ciphertext.length) best = candidate;
+        guessLen += Math.max(1, targetCiphertextLength - ciphertext.length);
+      } else {
+        guessLen -= Math.max(1, ciphertext.length - targetCiphertextLength);
+      }
+    }
+    return best;
+  }
+
+  // ---------------------------------------------------------------------
   // Bulk generation. Runs in synchronous chunks with a callback between
   // chunks (via setTimeout) so the browser tab stays responsive and a
   // progress bar / cancel button can be honored for large quantities.
@@ -124,26 +196,16 @@
       if (isCancelled && isCancelled()) { onDone(results, skipped, true); return; }
       const end = Math.min(quantity, i + CHUNK);
       for (; i < end; i++) {
-        const seq = pickPlaintextSequence(targetLength);
-        if (!seq) { skipped++; continue; }
-        const ptWithSpaces = seq.words.join(' ');
-        const ptNoSpaces = seq.words.join('');
-        let key, values, ciphertext;
-        try {
-          const rk = def.randomKey({ ptLength: ptNoSpaces.length, precedingText: seq.precedingText });
-          key = rk.key; values = rk.values;
-          ciphertext = def.encrypt(ptNoSpaces, key);
-        } catch (e) {
-          skipped++;
-          continue;
-        }
+        const found = pickForCiphertextLength(def, cipherId, targetLength);
+        if (!found) { skipped++; continue; }
+        const { seq, ptNoSpaces, key, ciphertext } = found;
         results.push({
           index: results.length + 1,
           cipherLabel: def.label,
           keyInfo: def.keyInfo(key),
           ciphertext,
           plaintextNoSpaces: ptNoSpaces,
-          plaintextWithSpaces: ptWithSpaces,
+          plaintextWithSpaces: seq.words.join(' '),
           corpusFile: seq.corpusFile,
         });
       }
@@ -175,6 +237,8 @@
   global.CipherGenerator = {
     pickPlaintextSequence,
     passesEntropyFilter,
+    estimatePlaintextLength,
+    pickForCiphertextLength,
     generateCiphersAsync,
     resultsToCsv,
   };

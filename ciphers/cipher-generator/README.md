@@ -96,17 +96,40 @@ is embedded directly into the page via `js/data/*.js`.
     keyword.
 - **Manual encrypt/decrypt mode**: pick a cipher, fill in (or randomize) its
   key, type plaintext or ciphertext, run it.
-- **Generation mode**: pick a target plaintext length (default 97, matching
-  Kryptos K4) and a quantity (supports generating thousands at once, chunked
-  so the browser tab stays responsive), and the tool will:
-  1. Pick a random corpus file.
-  2. Pick a random contiguous run of whole words from it whose combined
-     letter count (no spaces) exactly matches the target length, rejecting
-     runs that don't look like normal English (long repeated-letter runs or
-     unusually low letter-frequency entropy).
+- **Generation mode**: pick a target *ciphertext* length (default 97,
+  matching Kryptos K4's own ciphertext length) and a quantity (supports
+  generating thousands at once, chunked so the browser tab stays
+  responsive), and the tool will, per row:
+  1. Estimate how much plaintext the selected cipher needs to produce a
+     ciphertext of that length — 1 letter of plaintext per letter of
+     ciphertext for the large majority of ciphers, but e.g. half as much for
+     ciphers that fractionate/expand text 1-to-2 (Homophonic, ADFGX,
+     ADFGVX), or 25 fewer letters for Mirdek (whose ciphertext always opens
+     with a fixed 25-letter IV).
+  2. Pick a random corpus file, then a random contiguous run of whole words
+     from it whose combined letter count (no spaces) exactly matches that
+     estimate, rejecting runs that don't look like normal English (long
+     repeated-letter runs or unusually low letter-frequency entropy).
   3. Generate a random, cipher-appropriate key — keywords are drawn from the
      top 80% (by frequency rank) of `english_words__practicalcryptography_percentile_99.txt`.
-  4. Encrypt, and add the row to a paginated results table.
+  4. Encrypt, and check the actual ciphertext length against the target.
+     Ciphers whose plaintext:ciphertext length ratio is exact and
+     content-independent (the majority, plus Homophonic/ADFGX/ADFGVX's exact
+     x2 and Mirdek's exact +25) hit the target exactly on the first or
+     second try. Ciphers whose padding depends on the actual letters chosen
+     (Playfair's double-letter/odd-length fillers, Hill's block-size
+     padding) take a few more tries, adjusting the plaintext length from the
+     real measured ciphertext length each time. Either way, the ciphertext
+     is **never longer than the target** — steps 2-4 repeat with a shorter
+     plaintext estimate whenever a try comes out too long, and the row is
+     skipped (and counted in the "N skipped" summary) if no plaintext length
+     can reach the target at all (e.g. asking Mirdek, whose ciphertext is
+     always 25 letters longer than its plaintext, for a ciphertext under 26
+     letters) or an even ratio-2 cipher is asked for an odd target length
+     (the closest it can get without exceeding is one letter short).
+  5. Add the row to a paginated results table; its "CT Len" column reports
+     the actual ciphertext length achieved, so any shortfall from the target
+     is visible directly rather than needing to be inferred.
 - **CSV export** with columns: cipher type label, key information,
   ciphertext, plaintext without spaces, plaintext with spaces.
 - **Visualizer mode**: pick a cipher, load the built-in sample (or type your
@@ -132,11 +155,10 @@ is embedded directly into the page via `js/data/*.js`.
   plaintext letter's column and its confusion-keyword swap partner's column
   both picked out.
 
-Note: the target length governs the *plaintext* letter count that gets
-selected, not necessarily the final ciphertext length — ciphers that
-fractionate or expand text (homophonic substitution, ADFGX, ADFGVX roughly
-double it) or pad to a block size (Hill, Playfair) will produce a ciphertext
-a little longer than the target.
+See `js/generator.js`'s `pickForCiphertextLength` / `LENGTH_MODEL` for the
+exact per-cipher plaintext:ciphertext ratios and the retry loop that
+verifies (and corrects) against the real `encrypt()` output rather than
+trusting the ratio blindly.
 
 ## Corpora
 
