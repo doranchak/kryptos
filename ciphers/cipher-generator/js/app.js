@@ -50,6 +50,8 @@
     scytale: 'Plaintext is written across N columns and read down them in order — equivalent to columnar transposition with an unscrambled column order.',
     solitaire: 'Bruce Schneier’s Solitaire (a.k.a. Pontifex, from Cryptonomicon): a 54-card deck (with 2 jokers) generates a keystream by moving the jokers, cutting around them, and cutting by the bottom card’s value, then reading off an output card; that keystream is added to the plaintext letter by letter.',
     mirdek: 'Paul Crowley’s Mirdek: two 26-card piles (one per colour) are cut and dealt through each other during setup and encryption; each plaintext letter is found by dealing cards onto two alternating piles, and how many cards it took becomes the ciphertext letter. Ciphertext is 25 letters longer than the plaintext (a random initialization vector is prepended).',
+    periodic_transposition: 'Reads the plaintext starting at position 0, jumping a fixed interval at a time (wrapping around); when that walk closes back on its own starting point, the next walk starts at the lowest not-yet-visited position, and so on. Popularly (if imprecisely) described as how to solve Kryptos K3 (“count off every 192nd letter”) — the real K3 mechanism is Transposition: Inscription+Rotation, below.',
+    inscription_rotation_transposition: 'Kryptos K3’s actual mechanism: the plaintext is written into a grid, that grid is rotated 90/180/270° clockwise or counterclockwise, the rotated letters are inscribed into a second grid, which is itself rotated — reading the final grid off produces the ciphertext. K3 itself uses a 42x8 grid rotated 90° CW, inscribed into 14x24, rotated 90° CW again.',
   };
 
   let currentCipherId = CIPHER_ORDER[0];

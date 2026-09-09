@@ -12,14 +12,15 @@ is embedded directly into the page via `js/data/*.js`.
 
 ## Features
 
-- **36 cipher types**: simple substitution, homophonic substitution,
+- **38 cipher types**: simple substitution, homophonic substitution,
   **Chaocipher**, **Move-to-Front substitution**, **Move-to-Back
   substitution**, **Dynamic Substitution**, autokey, columnar transposition,
   double columnar transposition, rail fence, Myszkowski transposition, ADFGX,
   ADFGVX, bifid, trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**,
   **Running Key I-IV**, **running key + transposition**, **transposition +
-  running key**, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale,
-  **Solitaire (Pontifex)**, **Mirdek**.
+  running key**, **Transposition: Periodic**, **Transposition:
+  Inscription+Rotation**, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill,
+  scytale, **Solitaire (Pontifex)**, **Mirdek**.
   - Move-to-Front / Move-to-Back substitution: a single keyed 26-letter
     alphabet acts as a self-modifying substitution table. To encrypt
     plaintext letter P, find P's current position in that alphabet (0-25) —
@@ -94,6 +95,26 @@ is embedded directly into the page via `js/data/*.js`.
     the other. Which sub-type the transposition key field means is
     auto-detected: digits/commas -> simple periodic, letters -> columnar
     keyword.
+  - Transposition: Periodic reads the plaintext starting at position 0,
+    jumping a fixed `interval` letters at a time (wrapping around with
+    mod); when that walk closes back on its own starting point — which
+    happens before covering every letter whenever the interval and the
+    text length share a common factor — the next walk starts at the
+    lowest not-yet-visited position, and so on until every letter's been
+    read exactly once. This is the "skip cipher" popularly (if
+    imprecisely — see below) described as the way to solve Kryptos K3:
+    "count off every 192nd letter."
+  - Transposition: Inscription+Rotation is Kryptos K3's actual, exact
+    mechanism: the plaintext is written into a grid (column by column),
+    that grid is rotated 90°/180°/270° clockwise or counterclockwise, the
+    rotated grid's letters (again read column by column) are inscribed
+    into a second grid of different dimensions, which is itself rotated —
+    reading the final grid off (column by column) produces the
+    ciphertext. Grid sizes and rotations are independently configurable
+    for both stages; K3 itself uses a 42x8 grid rotated 90° clockwise
+    (giving 8x42), inscribed into a 14x24 grid, then rotated 90° clockwise
+    again (giving 24x14) — verified letter-for-letter against the real K3
+    plaintext and ciphertext (see "Notes on cipher fidelity" below).
 - **Manual encrypt/decrypt mode**: pick a cipher, fill in (or randomize) its
   key, type plaintext or ciphertext, run it.
 - **Generation mode**: pick a target *ciphertext* length (default 97,
@@ -203,8 +224,10 @@ you rebuild.
   cipher, and checks exact-match reference vectors for the Quagmire ciphers
   (against the ACA "Cryptogram" reference examples and the real Kryptos
   K1/K2 ciphertexts), Vigenère, Playfair, Rail Fence, Hill, Running Key I-IV
-  (see below), and both running-key-plus-transposition ciphers (hand-worked
-  vectors). Run with `node scripts/test_ciphers.js`.
+  (see below), both running-key-plus-transposition ciphers, Transposition:
+  Periodic, and Transposition: Inscription+Rotation (hand-worked vectors,
+  plus the real Kryptos K3 plaintext/ciphertext for Inscription+Rotation).
+  Run with `node scripts/test_ciphers.js`.
 
 ## Notes on cipher fidelity
 
@@ -273,3 +296,23 @@ cross-checked against a throwaway script before being locked in as a
 permanent KAT in `scripts/test_ciphers.js`, plus a longer round-trip check
 with independent, differently-sized keywords to confirm the confusion
 keyword's cycling wraps correctly.
+
+Transposition: Inscription+Rotation was reverse-engineered directly from the
+real Kryptos K3 plaintext/ciphertext: a brute-force search over grid fill/read
+order (row- vs. column-major), rotation direction, and grid dimensions found
+that filling and reading every grid column-major, with a 42x8 grid rotated
+90° clockwise, inscribed into a 14x24 grid, then rotated 90° clockwise again,
+reproduces the real 336-letter K3 ciphertext from the real K3 plaintext
+exactly — and decrypts it back exactly — which is now a permanent KAT in
+`scripts/test_ciphers.js`. Transposition: Periodic (the "skip cipher" widely
+described online as "count off every 192nd letter" to solve K3) is a real,
+independently useful interval-transposition technique in its own right, and
+is checked with hand-worked vectors, but it is *not* a literal
+reconstruction of K3: an exhaustive search (every interval 1-335 combined
+with every starting offset 0-335, plus the equivalent "counting-out"/
+Josephus formulation) found no parameterization of it that reproduces the
+real K3 ciphertext letter-for-letter. The "192nd letter" description appears
+to be a widely-repeated approximate/folk description of the
+Inscription+Rotation mechanism above (336 = 42x8 = 14x24, and 4x48 = 192
+connects to those same grid dimensions) rather than an independently exact
+algorithm.

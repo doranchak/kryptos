@@ -1274,6 +1274,223 @@
   });
 
   // ---------------------------------------------------------------------
+  // Periodic transposition - the "skip cipher" / interval route
+  // transposition popularly described as the way to solve Kryptos K3:
+  // "count off every 192nd letter." Read the plaintext starting at
+  // position 0, jumping `interval` letters at a time (wrapping around
+  // with mod); when that walk returns to its own starting point (a
+  // "cycle" - this happens before covering every letter whenever
+  // interval and the text length share a common factor > 1), the next
+  // cycle starts at the lowest position not yet visited, and so on until
+  // every letter has been read exactly once. Concatenating the cycles in
+  // the order they're started produces the ciphertext; decrypting undoes
+  // the same walk, placing each ciphertext letter back at the plaintext
+  // position the walk visited.
+  //
+  // NOTE ON K3: this is a real, generally-useful transposition technique
+  // in its own right, and is exhaustively verified (see
+  // scripts/test_ciphers.js) to round-trip correctly for any interval and
+  // text length. It is *not*, however, a literal reconstruction of K3's
+  // actual mechanism - no interval/starting-offset combination under this
+  // (or the equivalent "counting-out" / Josephus-style) definition
+  // reproduces the real K3 ciphertext letter-for-letter; that exact
+  // mechanism is the double grid-rotation procedure implemented below as
+  // "Transposition: Inscription+Rotation". The "192nd letter" description
+  // is a widely-repeated approximate/folk description of that same
+  // procedure (336 = 42x8 = 14x24, and 4x48 = 192, connecting it to the
+  // grid dimensions) rather than an independently exact algorithm.
+  // ---------------------------------------------------------------------
+  function periodicOrder(n, interval) {
+    const stride = mod(interval, n);
+    const order = new Array(n);
+    const visited = new Array(n).fill(false);
+    let oi = 0;
+    for (let s = 0; s < n; s++) {
+      if (visited[s]) continue;
+      let p = s;
+      do {
+        order[oi++] = p;
+        visited[p] = true;
+        p = (p + stride) % n;
+      } while (p !== s);
+    }
+    return order;
+  }
+
+  register({
+    id: 'periodic_transposition',
+    label: 'Transposition: Periodic',
+    fields: [
+      { name: 'interval', label: 'Interval (reads every Nth letter, wrapping, to build the ciphertext)', type: 'number', min: 2, max: 100000 },
+    ],
+    randomKey(opts) {
+      const ptLength = (opts && opts.ptLength) || 97;
+      const interval = randInt(2, Math.max(2, ptLength - 1));
+      return { key: { interval }, values: { interval: String(interval) } };
+    },
+    keyFromValues(values) {
+      const interval = parseInt(values.interval, 10);
+      if (!Number.isInteger(interval) || interval < 2) throw new Error('Interval must be an integer >= 2.');
+      return { interval };
+    },
+    keyInfo(key) { return `interval=${key.interval}`; },
+    encrypt(pt, key) {
+      if (!pt.length) return '';
+      const order = periodicOrder(pt.length, key.interval);
+      return order.map((i) => pt[i]).join('');
+    },
+    decrypt(ct, key) {
+      if (!ct.length) return '';
+      const order = periodicOrder(ct.length, key.interval);
+      const out = new Array(ct.length);
+      order.forEach((origIdx, k) => { out[origIdx] = ct[k]; });
+      return out.join('');
+    },
+  });
+
+  // ---------------------------------------------------------------------
+  // Inscription + Rotation transposition - the actual, exact mechanism
+  // Kryptos K3 uses. The plaintext is written into a grid (column by
+  // column), that grid is rotated 90/180/270 degrees clockwise or
+  // counterclockwise, the rotated grid's letters (again read off column
+  // by column) are inscribed into a second grid of different dimensions,
+  // which is itself rotated - reading the final grid off (column by
+  // column, once more) produces the ciphertext.
+  //
+  // K3 specifically: a 42x8 grid rotated 90 clockwise (giving 8x42),
+  // inscribed into a 14x24 grid, then rotated 90 clockwise again (giving
+  // 24x14) - verified letter-for-letter against the real K3
+  // plaintext/ciphertext in scripts/test_ciphers.js. Both grid sizes and
+  // both rotations are configurable here, so the same engine covers any
+  // similar double-grid route transposition, not just K3's own numbers.
+  // ---------------------------------------------------------------------
+  function fillGridColMajor(text, rows, cols) {
+    const g = Array.from({ length: rows }, () => new Array(cols));
+    let i = 0;
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) g[r][c] = text[i++];
+    return g;
+  }
+  function readGridColMajor(g) {
+    const rows = g.length, cols = g[0].length;
+    let out = '';
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) out += g[r][c];
+    return out;
+  }
+  function rotateGrid90CW(g) {
+    const rows = g.length, cols = g[0].length;
+    const out = Array.from({ length: cols }, () => new Array(rows));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) out[c][rows - 1 - r] = g[r][c];
+    return out;
+  }
+  function rotateGrid90CCW(g) {
+    const rows = g.length, cols = g[0].length;
+    const out = Array.from({ length: cols }, () => new Array(rows));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) out[cols - 1 - c][r] = g[r][c];
+    return out;
+  }
+  function rotatedGridDims(rows, cols, spec) {
+    return spec.deg === 180 ? { rows, cols } : { rows: cols, cols: rows };
+  }
+  function applyRotationSpec(g, spec) {
+    const times = spec.deg / 90;
+    let out = g;
+    for (let i = 0; i < times; i++) out = spec.dir === 'CW' ? rotateGrid90CW(out) : rotateGrid90CCW(out);
+    return out;
+  }
+  function invertRotationSpec(spec) { return { dir: spec.dir, deg: 360 - spec.deg }; }
+  function rotationSpecToString(spec) { return `${spec.dir}${spec.deg}`; }
+  function parseRotationSpec(raw) {
+    const s = (raw || '').trim().toUpperCase();
+    const m = /^(CCW|CW)(90|180|270)$/.exec(s);
+    if (!m) throw new Error('Rotation must be one of CW90, CW180, CW270, CCW90, CCW180, or CCW270.');
+    return { dir: m[1], deg: parseInt(m[2], 10) };
+  }
+  function divisorPairs(n) {
+    const pairs = [];
+    for (let r = 1; r <= n; r++) if (n % r === 0) pairs.push([r, n / r]);
+    return pairs;
+  }
+  function pickGridDims(n) {
+    const pairs = divisorPairs(n);
+    const nonTrivial = pairs.filter(([r, c]) => r > 1 && c > 1);
+    return randChoice(nonTrivial.length ? nonTrivial : pairs);
+  }
+  const ROTATION_CHOICES = [
+    { dir: 'CW', deg: 90 }, { dir: 'CW', deg: 180 }, { dir: 'CW', deg: 270 },
+    { dir: 'CCW', deg: 90 }, { dir: 'CCW', deg: 180 }, { dir: 'CCW', deg: 270 },
+  ];
+
+  register({
+    id: 'inscription_rotation_transposition',
+    label: 'Transposition: Inscription+Rotation',
+    fields: [
+      { name: 'rows1', label: 'First grid rows', type: 'number', min: 1, max: 500 },
+      { name: 'cols1', label: 'First grid columns', type: 'number', min: 1, max: 500 },
+      { name: 'rotation1', label: 'Rotation after first grid (CW90, CW180, CW270, CCW90, CCW180, or CCW270)', type: 'text', placeholder: 'e.g. CW90' },
+      { name: 'rows2', label: 'Second grid rows (the rotated first grid is inscribed into this grid)', type: 'number', min: 1, max: 500 },
+      { name: 'cols2', label: 'Second grid columns', type: 'number', min: 1, max: 500 },
+      { name: 'rotation2', label: 'Rotation after second grid (CW90, CW180, CW270, CCW90, CCW180, or CCW270)', type: 'text', placeholder: 'e.g. CW90' },
+    ],
+    randomKey(opts) {
+      const ptLength = (opts && opts.ptLength) || 97;
+      const [rows1, cols1] = pickGridDims(ptLength);
+      const [rows2, cols2] = pickGridDims(ptLength);
+      const rotation1 = randChoice(ROTATION_CHOICES);
+      const rotation2 = randChoice(ROTATION_CHOICES);
+      const key = { rows1, cols1, rotation1, rows2, cols2, rotation2 };
+      const values = {
+        rows1: String(rows1), cols1: String(cols1), rotation1: rotationSpecToString(rotation1),
+        rows2: String(rows2), cols2: String(cols2), rotation2: rotationSpecToString(rotation2),
+      };
+      return { key, values };
+    },
+    keyFromValues(values) {
+      const rows1 = parseInt(values.rows1, 10);
+      const cols1 = parseInt(values.cols1, 10);
+      const rows2 = parseInt(values.rows2, 10);
+      const cols2 = parseInt(values.cols2, 10);
+      for (const [v, name] of [[rows1, 'First grid rows'], [cols1, 'First grid columns'], [rows2, 'Second grid rows'], [cols2, 'Second grid columns']]) {
+        if (!Number.isInteger(v) || v < 1) throw new Error(`${name} must be a positive integer.`);
+      }
+      if (rows1 * cols1 !== rows2 * cols2) {
+        throw new Error(`First grid (${rows1}x${cols1} = ${rows1 * cols1} letters) and second grid (${rows2}x${cols2} = ${rows2 * cols2} letters) must hold the same number of letters.`);
+      }
+      const rotation1 = parseRotationSpec(values.rotation1);
+      const rotation2 = parseRotationSpec(values.rotation2);
+      return { rows1, cols1, rotation1, rows2, cols2, rotation2 };
+    },
+    keyInfo(key) {
+      return `grid1=${key.rows1}x${key.cols1} rot1=${rotationSpecToString(key.rotation1)} grid2=${key.rows2}x${key.cols2} rot2=${rotationSpecToString(key.rotation2)}`;
+    },
+    encrypt(pt, key) {
+      const n = pt.length;
+      if (key.rows1 * key.cols1 !== n) {
+        throw new Error(`First grid is ${key.rows1}x${key.cols1} (${key.rows1 * key.cols1} letters) but the plaintext is ${n} letters long - they must match exactly.`);
+      }
+      const g1 = fillGridColMajor(pt, key.rows1, key.cols1);
+      const g2 = applyRotationSpec(g1, key.rotation1);
+      const mid = readGridColMajor(g2);
+      const g3 = fillGridColMajor(mid, key.rows2, key.cols2);
+      const g4 = applyRotationSpec(g3, key.rotation2);
+      return readGridColMajor(g4);
+    },
+    decrypt(ct, key) {
+      const n = ct.length;
+      if (key.rows2 * key.cols2 !== n) {
+        throw new Error(`Second grid is ${key.rows2}x${key.cols2} (${key.rows2 * key.cols2} letters) but the ciphertext is ${n} letters long - they must match exactly.`);
+      }
+      const dims4 = rotatedGridDims(key.rows2, key.cols2, key.rotation2);
+      const g4 = fillGridColMajor(ct, dims4.rows, dims4.cols);
+      const g3 = applyRotationSpec(g4, invertRotationSpec(key.rotation2));
+      const mid = readGridColMajor(g3);
+      const dims2 = rotatedGridDims(key.rows1, key.cols1, key.rotation1);
+      const g2 = fillGridColMajor(mid, dims2.rows, dims2.cols);
+      const g1 = applyRotationSpec(g2, invertRotationSpec(key.rotation1));
+      return readGridColMajor(g1);
+    },
+  });
+
+  // ---------------------------------------------------------------------
   // Running Key + Transposition / Transposition + Running Key
   //
   // Two-layer ciphers: a Running Key encryption plus a transposition step,
@@ -2288,6 +2505,18 @@
     parseTranspositionKey,
     transpositionOrder,
     transpositionKeyInfo,
+    periodicOrder,
+    fillGridColMajor,
+    readGridColMajor,
+    rotateGrid90CW,
+    rotateGrid90CCW,
+    rotatedGridDims,
+    applyRotationSpec,
+    invertRotationSpec,
+    rotationSpecToString,
+    parseRotationSpec,
+    divisorPairs,
+    pickGridDims,
     buildHomophoneTables,
     ENGLISH_FREQ,
     buildPolybiusSquare,

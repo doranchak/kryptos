@@ -461,6 +461,88 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(CIPHERS.columnar_transposition.decrypt(ct, key), pt, 'Columnar transposition round-trip');
 }
 
+// --- Periodic transposition, hand-worked vectors (pt="ATTACKATDAWN", 12
+// letters). interval=5 is coprime with 12, so it's a single 12-letter
+// cycle (0,5,10,3,8,1,6,11,4,9,2,7 - worked by hand and cross-checked with
+// an independent script); interval=4 shares a factor with 12 (gcd=4), so
+// it's four separate 3-letter cycles (0,4,8 / 1,5,9 / 2,6,10 / 3,7,11)
+// concatenated in the order they're started, exercising the
+// multi-cycle/restart path. ---
+{
+  const pt = 'ATTACKATDAWN';
+  const ct5 = CIPHERS.periodic_transposition.encrypt(pt, { interval: 5 });
+  assertEq(ct5, 'AKWADTANCATT', 'Periodic transposition hand-worked vector (interval=5, single cycle)');
+  assertEq(CIPHERS.periodic_transposition.decrypt(ct5, { interval: 5 }), pt, 'Periodic transposition decrypt round-trip (interval=5)');
+
+  const ct4 = CIPHERS.periodic_transposition.encrypt(pt, { interval: 4 });
+  assertEq(ct4, 'ACDTKATAWATN', 'Periodic transposition hand-worked vector (interval=4, gcd(4,12)=4, four 3-letter cycles)');
+  assertEq(CIPHERS.periodic_transposition.decrypt(ct4, { interval: 4 }), pt, 'Periodic transposition decrypt round-trip (interval=4)');
+}
+
+// --- Inscription+Rotation transposition: Kryptos K3's actual, exact
+// mechanism (write the plaintext into a 42x8 grid, rotate 90 clockwise
+// (-> 8x42), inscribe the result into a 14x24 grid, rotate 90 clockwise
+// again (-> 24x14)), checked against the real K3 plaintext and ciphertext
+// (336 letters; K3's trailing "?" is dropped since these ciphers only
+// carry A-Z). This exact grid-dimensions-and-rotations combination was
+// found by brute-force search over fill/read order, rotation direction,
+// and grid dimensions until the output matched the real K3 ciphertext -
+// see the chat transcript / project notes for the full derivation.
+//
+// A separate, equally exhaustive search (every interval 1..335 combined
+// with every starting offset 0..335, in both the "restart at next
+// unvisited position" and the equivalent "counting-out"/Josephus
+// formulations) found *no* parameterization of the Periodic transposition
+// above that reproduces this same ciphertext letter-for-letter - so while
+// "count off every 192nd letter" is a widely-repeated description of how
+// to solve K3, it is a folk description of this double grid-rotation
+// procedure (336 = 42x8 = 14x24, and 4x48 = 192 connects to the grid
+// dimensions), not an independently exact algorithm in its own right. ---
+{
+  const K3_CT = 'ENDYAHROHNLSRHEOCPTEOIBIDYSHNAIACHTNREYULDSLLSLLNOHSNOSMRWXMNETPRNGATIHNRARPESLNNELEBLPIIACAEWMTWNDITEENRAHCTENEUDRETNHAEOETFOLSEDTIWENHAEIOYTEYQHEENCTAYCREIFTBRSPAMHNEWENATAMATEGYEERLBTEEFOASFIOTUETUAEOTOARMAEERTNRTIBSEDDNIAAHTTMSTEWPIEROAGRIEWFEBAECTDDHILCEIHSITEGOEAOSDDRYDLORITRKLMLEHAGTDHARDPNEOHMGFMFEUHEECDMRIPFEIMEHNLSSTTRTVDOHW';
+  const K3_PT = 'SLOWLYDESPARATLYSLOWLYTHEREMAINSOFPASSAGEDEBRISTHATENCUMBEREDTHELOWERPARTOFTHEDOORWAYWASREMOVEDWITHTREMBLINGHANDSIMADEATINYBREACNINTHEUPPERLEFTHANDCORNERANDTHENWIDENINGTHEHOLEALITTLEIINSERTEDTHECANDLEANDPEEREDINTHEHOTAIRESCAPINGFROMTHECHAMBERCAUSEDTHEFLAMETOFLICKERBUTPRESENTLYDETAILSOFTHEROOMWITHINEMERGEDFROMTHEMISTXCANYOUSEEANYTHINGQ';
+  assertEq(K3_CT.length, 336, 'K3 ciphertext reference vector is 336 letters');
+  assertEq(K3_PT.length, 336, 'K3 plaintext reference vector is 336 letters');
+
+  const values = { rows1: '42', cols1: '8', rotation1: 'CW90', rows2: '14', cols2: '24', rotation2: 'CW90' };
+  const key = CIPHERS.inscription_rotation_transposition.keyFromValues(values);
+  const ct = CIPHERS.inscription_rotation_transposition.encrypt(K3_PT, key);
+  assertEq(ct, K3_CT, 'Inscription+Rotation (42x8 CW90, 14x24 CW90) reproduces the real Kryptos K3 ciphertext exactly');
+  const pt = CIPHERS.inscription_rotation_transposition.decrypt(K3_CT, key);
+  assertEq(pt, K3_PT, 'Inscription+Rotation decrypts the real Kryptos K3 ciphertext back to the real plaintext exactly');
+
+  // keyFromValues round-trip (manual-mode path) reproduces the same key.
+  const key2 = CIPHERS.inscription_rotation_transposition.keyFromValues(values);
+  assertEq(CIPHERS.inscription_rotation_transposition.encrypt(K3_PT, key2), K3_CT, 'Inscription+Rotation keyFromValues reproduces the working K3 key');
+}
+
+// --- Inscription+Rotation: rejects mismatched grid/text sizes and
+// mismatched grid products, and round-trips arbitrary rotation combos. ---
+{
+  let threw = false;
+  try {
+    CIPHERS.inscription_rotation_transposition.keyFromValues({ rows1: '3', cols1: '4', rotation1: 'CW90', rows2: '5', cols2: '2', rotation2: 'CW90' });
+  } catch (e) { threw = true; }
+  assertTrue(threw, 'Inscription+Rotation rejects grids whose products (letter counts) differ');
+
+  threw = false;
+  try {
+    const key = CIPHERS.inscription_rotation_transposition.keyFromValues({ rows1: '3', cols1: '4', rotation1: 'CW90', rows2: '4', cols2: '3', rotation2: 'CCW90' });
+    CIPHERS.inscription_rotation_transposition.encrypt('SHORT', key); // 5 letters != 12
+  } catch (e) { threw = true; }
+  assertTrue(threw, 'Inscription+Rotation rejects plaintext whose length does not match the first grid');
+
+  // Every CW/CCW x 90/180/270 combination round-trips on a 3x4=12 grid.
+  const pt = 'ABCDEFGHIJKL';
+  for (const rotation1 of ['CW90', 'CW180', 'CW270', 'CCW90', 'CCW180', 'CCW270']) {
+    for (const rotation2 of ['CW90', 'CW180', 'CW270', 'CCW90', 'CCW180', 'CCW270']) {
+      const key = CIPHERS.inscription_rotation_transposition.keyFromValues({ rows1: '3', cols1: '4', rotation1, rows2: '4', cols2: '3', rotation2 });
+      const ct = CIPHERS.inscription_rotation_transposition.encrypt(pt, key);
+      assertEq(CIPHERS.inscription_rotation_transposition.decrypt(ct, key), pt, `Inscription+Rotation round-trip (${rotation1}, ${rotation2})`);
+    }
+  }
+}
+
 // --- Hill cipher textbook vector (2x2, "HELP" with key [[3,3],[2,5]]) ---
 {
   const key = { size: 2, matrix: [[3, 3], [2, 5]] };
