@@ -12,15 +12,17 @@ is embedded directly into the page via `js/data/*.js`.
 
 ## Features
 
-- **38 cipher types**: simple substitution, homophonic substitution,
-  **Chaocipher**, **Move-to-Front substitution**, **Move-to-Back
-  substitution**, **Dynamic Substitution**, autokey, columnar transposition,
-  double columnar transposition, rail fence, Myszkowski transposition, ADFGX,
-  ADFGVX, bifid, trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**,
-  **Running Key I-IV**, **running key + transposition**, **transposition +
-  running key**, **Transposition: Periodic**, **Transposition:
-  Inscription+Rotation**, Vigenère, Enigma, Beaufort, Porta, Playfair, Hill,
-  scytale, **Solitaire (Pontifex)**, **Mirdek**.
+- **42 cipher types**: simple substitution, homophonic substitution,
+  **Chaocipher** (plus four Chaocipher-like variants: **Single Wheel**,
+  **Symmetric Wheels**, **Adjustable Cut Point**, **Double Splice** - see
+  below), **Move-to-Front substitution**, **Move-to-Back substitution**,
+  **Dynamic Substitution**, autokey, columnar transposition, double columnar
+  transposition, rail fence, Myszkowski transposition, ADFGX, ADFGVX, bifid,
+  trifid, Quagmire I-IV, **Running Key**, **Running Key ACA**, **Running Key
+  I-IV**, **running key + transposition**, **transposition + running key**,
+  **Transposition: Periodic**, **Transposition: Inscription+Rotation**,
+  Vigenère, Enigma, Beaufort, Porta, Playfair, Hill, scytale, **Solitaire
+  (Pontifex)**, **Mirdek**.
   - Move-to-Front / Move-to-Back substitution: a single keyed 26-letter
     alphabet acts as a self-modifying substitution table. To encrypt
     plaintext letter P, find P's current position in that alphabet (0-25) —
@@ -47,6 +49,32 @@ is embedded directly into the page via `js/data/*.js`.
     position 0, then moves one more letter to position 13; the right disk
     takes one extra rotation step first), so the effective substitution
     never repeats.
+  - The four Chaocipher variants are not Chaocipher itself - they're
+    original mechanical tweaks meant to model what an independent
+    cryptographer, who had never heard of Byrne's system, might plausibly
+    invent along the way to (or past) the same core idea: a mixed alphabet
+    that gets a small local splice - one letter pulled out and reinserted a
+    fixed distance away - immediately after every letter, so the
+    substitution keeps drifting and never repeats or fractionates. They're
+    meant as instructive near-misses for anything trying to recognize
+    Chaocipher from that family resemblance alone.
+    - **Single Wheel**: the two-disk machine collapsed to one disk, with the
+      ciphertext letter read off the point diametrically opposite the
+      plaintext letter (13 positions away, its own inverse) instead of off a
+      second disk.
+    - **Symmetric Wheels**: Chaocipher's exact two-disk lookup, but without
+      Byrne's one asymmetry - both disks are permuted by the identical rule
+      instead of giving the plaintext disk an extra rotation step.
+    - **Adjustable Cut Point**: Chaocipher's exact two-disk lookup and
+      rotation rule, but the splice's reinsertion point (always the disk's
+      antipodal point, position 13, in Byrne's design) is a chosen key
+      parameter from 1-24 instead of a fixed constant - cut position 13 is
+      mathematically identical to real Chaocipher, so this variant strictly
+      generalizes it.
+    - **Double Splice**: Chaocipher's exact two-disk lookup and permutation
+      rule, applied twice per letter instead of once - the same "scramble it
+      twice for extra security" instinct behind this tool's own Double
+      Columnar Transposition, applied to a different cipher family.
   - Solitaire, a.k.a. Pontifex (Bruce Schneier, from *Cryptonomicon*): a
     54-card deck (52 cards + 2 distinguishable jokers) generates a keystream
     by moving the jokers down 1 and 2 cards, triple-cutting around them,
@@ -151,8 +179,26 @@ is embedded directly into the page via `js/data/*.js`.
   5. Add the row to a paginated results table; its "CT Len" column reports
      the actual ciphertext length achieved, so any shortfall from the target
      is visible directly rather than needing to be inferred.
+  - A **fixed length / length range** toggle switches step 4's success
+    condition: fixed mode targets one exact ciphertext length as above;
+    range mode accepts any ciphertext length within a min/max window
+    (inclusive), which is useful for ciphers that can't land on an
+    arbitrary exact length (e.g. an odd target for a ratio-2 cipher, or
+    letting Playfair/Hill's content-dependent padding land anywhere in a
+    window instead of chasing one exact number).
 - **CSV export** with columns: cipher type label, key information,
   ciphertext, plaintext without spaces, plaintext with spaces.
+- **Bulk Generate mode**: the same generation engine and fixed-length/range
+  toggle as Generation mode above, but run once per registered cipher type
+  instead of just the one selected in the dropdown. Give it a quantity (per
+  type) and a target length or range, and it generates that many samples of
+  **every** cipher type in turn, downloading each type's own CSV
+  automatically as soon as that type finishes (so a run can be interrupted
+  or a browser download-permission prompt handled without losing the types
+  already done), plus a live per-type table of how many were generated vs.
+  skipped. A "Download combined CSV" button becomes available once the
+  whole run finishes, for a single file with every cipher type's rows
+  together instead of one file per type.
 - **Visualizer mode**: pick a cipher, load the built-in sample (or type your
   own plaintext/ciphertext), and hover any letter to see exactly how it maps
   to the other side — which key-table cell, alphabet position, transposition
@@ -260,7 +306,28 @@ settings translation. Chaocipher's permutation rule (which position each
 disk rotates to the front, and which position gets moved where) was
 reverse-engineered by brute-force search against a vector generated by
 dcode.gr's Chaocipher tool, then locked in as a permanent KAT in
-`scripts/test_ciphers.js` — exact match on both encrypt and decrypt.
+`scripts/test_ciphers.js` — exact match on both encrypt and decrypt. The
+four Chaocipher variants have no external reference (they're original
+variations, not historical ciphers), so `scripts/test_ciphers.js`
+establishes their correctness by relating each one back to that
+already-verified Chaocipher vector instead of an arbitrary locked-in value:
+three of the four keep Chaocipher's exact lookup rule and only change how
+the disks get permuted *afterward*, so their very first output letter (
+computed before either disk has been touched) must equal, and does equal,
+real Chaocipher's first output letter on the same starting disks; Adjustable
+Cut Point with `cutPosition=13` is mathematically identical to real
+Chaocipher end to end and reproduces its full reference ciphertext exactly;
+Double Splice is independently cross-checked by hand-driving the exported
+`chaoStep` primitive twice per letter rather than by calling its own
+`encrypt()` and comparing the result to itself. (An earlier "Cross-Coupled
+Wheels" variant design — routing each disk's extracted letter into the
+*other* disk's splice point — was dropped after round-trip testing caught a
+real bug in it: since both disks are independent permutations of the same
+26 letters, moving a letter's value from one disk directly into the other
+creates a duplicate there and silently drops a different letter, corrupting
+the disk after enough letters. Double Splice replaced it precisely because
+it can't have that class of bug — it only ever rearranges each disk using
+its own existing letters.)
 Solitaire is checked against all three official worked examples on
 [schneier.com/academic/solitaire](https://www.schneier.com/academic/solitaire/)
 (an unkeyed deck, and two passphrase-keyed examples) plus that page's own

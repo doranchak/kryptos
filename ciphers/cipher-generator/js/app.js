@@ -17,6 +17,10 @@
     simple_substitution: 'Each plaintext letter always maps to the same cipher letter; the cipher alphabet is a fixed permutation of A-Z.',
     homophonic_substitution: 'Each plaintext letter maps to one of several 2-digit codes (00-99), allocated proportional to English letter frequency so the ciphertext distribution is closer to flat. Ciphertext is digits, decoded 2 at a time.',
     chaocipher: 'Two 26-letter "disks" (left = ciphertext alphabet, right = plaintext alphabet) that dynamically reshuffle after every single letter, so the effective substitution never repeats and never settles into a fixed pattern.',
+    chaocipher_single_wheel: 'One shared 26-letter wheel instead of Chaocipher\'s two: the ciphertext letter is read off the point diametrically opposite the plaintext letter (13 positions away - its own inverse, since 13+13=26), then the wheel gets the same single splice (rotate to the ciphertext letter, pull out its neighbor, reinsert opposite) as one of Chaocipher\'s disks.',
+    chaocipher_symmetric: 'Chaocipher\'s exact two-disk lookup, but without Byrne\'s one asymmetry: both disks are permuted by the identical rule (rotate the just-used letter to the front, splice) instead of giving the plaintext disk an extra rotation step.',
+    chaocipher_adjustable_cut: 'Chaocipher\'s exact two-disk lookup and rotation rule, but the splice\'s reinsertion point - always position 13 (diametrically opposite) in Byrne\'s design - is a chosen key parameter (1-24) instead of a fixed constant. Cut position 13 is mathematically identical to real Chaocipher.',
+    chaocipher_double_splice: 'Chaocipher\'s exact two-disk lookup and permutation rule, applied twice per letter instead of once - "scramble it twice for extra security."',
     move_to_front: 'A single keyed alphabet substitution table: each plaintext letter’s current position (0-25) is the ciphertext, then that letter moves to the very front of the alphabet, so frequently-used letters drift toward the front and the effective shift changes with every letter.',
     move_to_back: 'Like Move-to-Front, but the used letter moves to the very back of the alphabet instead of the front - frequently-used letters drift toward the back, and an immediately-repeated letter always encrypts to ’Z’.',
     dynamic_substitution: 'Terry Ritter’s "Dynamic Substitution Combiner" (1990): a keyed substitution table maps each plaintext letter to a ciphertext letter, then swaps the entry it just used with the entry at a position given by a second, independent keyword (cycling like a repeating key) - so the table keeps re-arranging itself as it goes, one exchange per letter.',
@@ -83,6 +87,7 @@
   const modePanels = {
     manual: document.getElementById('manualPanel'),
     generate: document.getElementById('generatePanel'),
+    bulk: document.getElementById('bulkPanel'),
     visualize: document.getElementById('visualizePanel'),
   };
   tabBtns.forEach((btn) => {
@@ -192,9 +197,55 @@
   inputLabel.textContent = 'Plaintext';
 
   // ---------------------------------------------------------------------
+  // Length-mode toggle (fixed target length vs. a min/max range), shared
+  // between the single-cipher Generate panel and the Bulk Generate panel -
+  // each gets its own instance (own radio group name and field ids) since
+  // they're independent forms, but both read out through the same
+  // getLengthSpec() shape that generator.js expects: a plain number for a
+  // fixed target, or { min, max } for a range.
+  // ---------------------------------------------------------------------
+  function initLengthModeToggle({ radioName, targetFieldId, minFieldId, maxFieldId, targetInputId, minInputId, maxInputId }) {
+    const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+    const targetField = document.getElementById(targetFieldId);
+    const minField = document.getElementById(minFieldId);
+    const maxField = document.getElementById(maxFieldId);
+    const targetInput = document.getElementById(targetInputId);
+    const minInput = document.getElementById(minInputId);
+    const maxInput = document.getElementById(maxInputId);
+    let mode = 'fixed';
+    radios.forEach((radio) => {
+      radio.addEventListener('change', (e) => {
+        mode = e.target.value;
+        targetField.hidden = mode !== 'fixed';
+        minField.hidden = mode !== 'range';
+        maxField.hidden = mode !== 'range';
+      });
+    });
+    return {
+      // Throws a plain Error with a user-facing message on invalid input.
+      getLengthSpec() {
+        if (mode === 'range') {
+          const min = parseInt(minInput.value, 10);
+          const max = parseInt(maxInput.value, 10);
+          if (!Number.isInteger(min) || min < 1) throw new Error('Min length must be a positive integer.');
+          if (!Number.isInteger(max) || max < min) throw new Error('Max length must be an integer >= min length.');
+          return { min, max };
+        }
+        const target = parseInt(targetInput.value, 10);
+        if (!Number.isInteger(target) || target < 1) throw new Error('Target length must be a positive integer.');
+        return target;
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------------
   // Generation mode
   // ---------------------------------------------------------------------
-  const targetLengthInput = document.getElementById('targetLength');
+  const lengthMode = initLengthModeToggle({
+    radioName: 'lengthMode',
+    targetFieldId: 'targetLengthField', minFieldId: 'minLengthField', maxFieldId: 'maxLengthField',
+    targetInputId: 'targetLength', minInputId: 'minLength', maxInputId: 'maxLength',
+  });
   const quantityInput = document.getElementById('quantity');
   const generateBtn = document.getElementById('generateBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -252,9 +303,9 @@
   pageSizeSelect.addEventListener('change', () => { currentPage = 1; renderPage(); });
 
   generateBtn.addEventListener('click', () => {
-    const targetLength = parseInt(targetLengthInput.value, 10);
+    let lengthSpec;
+    try { lengthSpec = lengthMode.getLengthSpec(); } catch (e) { alert(e.message); return; }
     const quantity = parseInt(quantityInput.value, 10);
-    if (!Number.isInteger(targetLength) || targetLength < 1) { alert('Target length must be a positive integer.'); return; }
     if (!Number.isInteger(quantity) || quantity < 1) { alert('Quantity must be a positive integer.'); return; }
     if (quantity > 5000 && !confirm(`Generate ${quantity} ciphers? This may take a little while.`)) return;
 
@@ -272,7 +323,7 @@
 
     window.CipherGenerator.generateCiphersAsync({
       cipherId: currentCipherId,
-      targetLength,
+      lengthSpec,
       quantity,
       isCancelled: () => cancelled,
       onProgress: (done, total, produced) => {
@@ -302,19 +353,128 @@
 
   cancelBtn.addEventListener('click', () => { cancelled = true; });
 
-  exportCsvBtn.addEventListener('click', () => {
-    if (allResults.length === 0) return;
-    const csv = window.CipherGenerator.resultsToCsv(allResults);
+  // Triggers a browser download of `csv` as `filename`, via a throwaway
+  // Blob URL + <a download> - shared by the single-cipher Export CSV
+  // button and Bulk Generate's per-type/combined downloads below.
+  function downloadCsv(csv, filename) {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    a.download = `ciphers_${currentCipherId}_${ts}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function timestamp() { return new Date().toISOString().replace(/[:.]/g, '-'); }
+
+  exportCsvBtn.addEventListener('click', () => {
+    if (allResults.length === 0) return;
+    downloadCsv(window.CipherGenerator.resultsToCsv(allResults), `ciphers_${currentCipherId}_${timestamp()}.csv`);
+  });
+
+  // ---------------------------------------------------------------------
+  // Bulk Generate mode: runs the same generation engine for every
+  // registered cipher type in turn, targeting the same length spec, and
+  // downloads one CSV per type as soon as that type finishes (plus makes a
+  // combined CSV of everything available once the whole run completes).
+  // ---------------------------------------------------------------------
+  const bulkLengthMode = initLengthModeToggle({
+    radioName: 'bulkLengthMode',
+    targetFieldId: 'bulkTargetLengthField', minFieldId: 'bulkMinLengthField', maxFieldId: 'bulkMaxLengthField',
+    targetInputId: 'bulkTargetLength', minInputId: 'bulkMinLength', maxInputId: 'bulkMaxLength',
+  });
+  const bulkQuantityInput = document.getElementById('bulkQuantity');
+  const bulkGenerateBtn = document.getElementById('bulkGenerateBtn');
+  const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+  const bulkDownloadAllBtn = document.getElementById('bulkDownloadAllBtn');
+  const bulkProgress = document.getElementById('bulkProgress');
+  const bulkProgressFill = document.getElementById('bulkProgressFill');
+  const bulkProgressText = document.getElementById('bulkProgressText');
+  const bulkSummary = document.getElementById('bulkSummary');
+  const bulkResultsBody = document.getElementById('bulkResultsBody');
+  document.getElementById('bulkCipherCount').textContent = CIPHER_ORDER.length;
+
+  let bulkCancelled = false;
+  let bulkAllResults = []; // flattened across every cipher type, for the combined CSV
+  let bulkRowByCipher = {};
+
+  bulkGenerateBtn.addEventListener('click', () => {
+    let lengthSpec;
+    try { lengthSpec = bulkLengthMode.getLengthSpec(); } catch (e) { alert(e.message); return; }
+    const quantity = parseInt(bulkQuantityInput.value, 10);
+    if (!Number.isInteger(quantity) || quantity < 1) { alert('Quantity must be a positive integer.'); return; }
+    const totalTypes = CIPHER_ORDER.length;
+    if (!confirm(`Generate ${quantity} ciphers for each of ${totalTypes} cipher types (${quantity * totalTypes} total), downloading one CSV per type as it finishes?`)) return;
+
+    bulkCancelled = false;
+    bulkAllResults = [];
+    bulkRowByCipher = {};
+    bulkResultsBody.innerHTML = '';
+    bulkSummary.textContent = '';
+    bulkDownloadAllBtn.disabled = true;
+    bulkGenerateBtn.disabled = true;
+    bulkCancelBtn.hidden = false;
+    bulkProgress.hidden = false;
+    bulkProgressFill.style.width = '0%';
+    bulkProgressText.textContent = `0 / ${totalTypes} cipher types`;
+
+    CIPHER_ORDER.forEach((id) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(CIPHERS[id].label)}</td><td class="col-len">–</td><td class="col-len">–</td><td>Waiting…</td>`;
+      bulkResultsBody.appendChild(tr);
+      bulkRowByCipher[id] = tr;
+    });
+
+    const runTs = timestamp();
+    window.CipherGenerator.generateBulkAsync({
+      cipherIds: CIPHER_ORDER,
+      lengthSpec,
+      quantity,
+      isCancelled: () => bulkCancelled,
+      onCipherStart: (cipherId) => {
+        const row = bulkRowByCipher[cipherId];
+        if (row) row.children[3].textContent = 'Generating…';
+      },
+      onCipherDone: (cipherId, results, skipped, wasCancelled, index, total) => {
+        bulkAllResults = bulkAllResults.concat(results);
+        const row = bulkRowByCipher[cipherId];
+        if (row) {
+          row.children[1].textContent = results.length;
+          row.children[2].textContent = skipped;
+        }
+        if (results.length > 0) {
+          downloadCsv(window.CipherGenerator.resultsToCsv(results), `ciphers_${cipherId}_${runTs}.csv`);
+          if (row) row.children[3].textContent = 'Downloaded';
+        } else if (row) {
+          row.children[3].textContent = 'No results';
+        }
+        const done = index + 1;
+        const pct = Math.round((done / total) * 100);
+        bulkProgressFill.style.width = pct + '%';
+        bulkProgressText.textContent = `${done} / ${total} cipher types`;
+      },
+      onAllDone: (allByType, wasCancelled) => {
+        bulkProgress.hidden = true;
+        bulkGenerateBtn.disabled = false;
+        bulkCancelBtn.hidden = true;
+        bulkDownloadAllBtn.disabled = bulkAllResults.length === 0;
+        bulkSummary.textContent = wasCancelled
+          ? `Cancelled. ${bulkAllResults.length} ciphers generated across ${allByType.length} cipher types before stopping.`
+          : `Done. Generated ${bulkAllResults.length} ciphers across ${allByType.length} cipher types (one CSV downloaded per type).`;
+      },
+      onError: (e, cipherId) => {
+        bulkSummary.textContent = `Error (${cipherId || 'unknown cipher'}): ${e.message}`;
+      },
+    });
+  });
+
+  bulkCancelBtn.addEventListener('click', () => { bulkCancelled = true; });
+
+  bulkDownloadAllBtn.addEventListener('click', () => {
+    if (bulkAllResults.length === 0) return;
+    downloadCsv(window.CipherGenerator.resultsToCsv(bulkAllResults), `ciphers_all_${timestamp()}.csv`);
   });
 
   // ---------------------------------------------------------------------

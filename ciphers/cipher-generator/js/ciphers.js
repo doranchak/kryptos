@@ -321,6 +321,261 @@
   });
 
   // ---------------------------------------------------------------------
+  // Chaocipher variants.
+  //
+  // These are not Chaocipher itself - they're small, independently-plausible
+  // mechanical tweaks a cryptographer could stumble onto without ever having
+  // heard of Byrne's system, while keeping its one truly distinctive habit:
+  // a mixed alphabet that is locally spliced (one letter pulled out and
+  // reinserted a fixed distance away, not globally reshuffled or merely
+  // rotated) immediately after every single letter, so the effective
+  // substitution keeps drifting and never repeats. That habit is what gives
+  // real Chaocipher ciphertext its particular statistical fingerprint
+  // (dynamic, high-diffusion, but not fractionating - still one ciphertext
+  // letter per plaintext letter); these variants are meant to reproduce that
+  // same family resemblance from a different, unrelated-looking mechanism,
+  // as plausible "false positives" for anything that fingerprints on it.
+  // All four share chaoRotate/chaoRemoveInsert above; only the wiring
+  // differs from Byrne's original (single wheel instead of two; both wheels
+  // treated identically; a configurable splice point instead of the fixed
+  // nadir; or the two wheels feeding each other's splice instead of each
+  // tending its own).
+  // ---------------------------------------------------------------------
+
+  // --- Chaocipher: Single Wheel --------------------------------------------
+  // The two-disk machine simplified to the one-disk machine a tinkerer would
+  // reach for first: a single mixed alphabet with two reading windows fixed
+  // on opposite sides of the rim (13 letters apart, i.e. antipodal - the
+  // plaintext letter is read under one window, the ciphertext letter under
+  // the other). Because 13+13 = 26, "opposite" is its own inverse, so the
+  // same single lookup rule works for both enciphering and deciphering.
+  // After every letter, the wheel gets the same local splice real
+  // Chaocipher's disks get (rotate the ciphertext letter's position to the
+  // zenith, pull out its neighbor, reinsert it opposite) - one splice per
+  // letter instead of two, but the same self-modifying-alphabet signature.
+  register({
+    id: 'chaocipher_single_wheel',
+    label: 'Chaocipher: Single Wheel',
+    fields: [
+      { name: 'wheelAlphabet', label: 'Wheel alphabet, 26 letters', type: 'text', placeholder: 'e.g. XLEMFHIWOVNYRUDQCJPASGBTKZ' },
+    ],
+    randomKey() {
+      const wheelAlphabet = shuffled(ALPHABET.split('')).join('');
+      return { key: { wheelAlphabet }, values: { wheelAlphabet } };
+    },
+    keyFromValues(values) {
+      const wheelAlphabet = onlyLetters(values.wheelAlphabet);
+      if (wheelAlphabet.length !== 26 || new Set(wheelAlphabet).size !== 26) throw new Error('Wheel alphabet must contain exactly the 26 letters A-Z, each once.');
+      return { wheelAlphabet };
+    },
+    keyInfo(key) { return `wheel=${key.wheelAlphabet}`; },
+    encrypt(pt, key) {
+      let wheel = key.wheelAlphabet.split('');
+      let out = '';
+      for (const ch of pt) {
+        const i = wheel.indexOf(ch);
+        const j = mod(i + 13, 26);
+        out += wheel[j];
+        wheel = chaoRemoveInsert(chaoRotate(wheel, j), 1, 13);
+      }
+      return out;
+    },
+    decrypt(ct, key) {
+      let wheel = key.wheelAlphabet.split('');
+      let out = '';
+      for (const ch of ct) {
+        const j = wheel.indexOf(ch);
+        const i = mod(j + 13, 26);
+        out += wheel[i];
+        wheel = chaoRemoveInsert(chaoRotate(wheel, j), 1, 13);
+      }
+      return out;
+    },
+  });
+
+  // --- Chaocipher: Symmetric Wheels ----------------------------------------
+  // Real Chaocipher's two-disk lookup (plaintext read off the right disk,
+  // ciphertext directly above it on the left), but without Byrne's one
+  // subtle asymmetry - the extra single-step rotation he gives the right
+  // (plaintext) disk before it splices. A cryptographer building this from
+  // first principles, wanting the two disks to behave alike "for symmetry",
+  // would very plausibly treat them identically: rotate the just-used
+  // letter to the zenith and splice, on both disks, using the exact same
+  // rule. (Byrne's extra step turns out to matter for how the system's
+  // internal state evolves - dropping it is a small change with no obvious
+  // reason, from outside the system, to expect it changes anything.)
+  register({
+    id: 'chaocipher_symmetric',
+    label: 'Chaocipher: Symmetric Wheels',
+    fields: [
+      { name: 'leftAlphabet', label: 'Left disk alphabet (ciphertext), 26 letters', type: 'text', placeholder: 'e.g. XLEMFHIWOVNYRUDQCJPASGBTKZ' },
+      { name: 'rightAlphabet', label: 'Right disk alphabet (plaintext), 26 letters', type: 'text', placeholder: 'e.g. SGLBIZHJMFTRXAVKNQPDWYCUOE' },
+    ],
+    randomKey() {
+      const leftAlphabet = shuffled(ALPHABET.split('')).join('');
+      const rightAlphabet = shuffled(ALPHABET.split('')).join('');
+      return { key: { leftAlphabet, rightAlphabet }, values: { leftAlphabet, rightAlphabet } };
+    },
+    keyFromValues(values) {
+      const left = onlyLetters(values.leftAlphabet);
+      const right = onlyLetters(values.rightAlphabet);
+      if (left.length !== 26 || new Set(left).size !== 26) throw new Error('Left disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      if (right.length !== 26 || new Set(right).size !== 26) throw new Error('Right disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      return { leftAlphabet: left, rightAlphabet: right };
+    },
+    keyInfo(key) { return `left=${key.leftAlphabet} right=${key.rightAlphabet}`; },
+    encrypt(pt, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of pt) {
+        const i = right.indexOf(ch);
+        out += left[i];
+        left = chaoRemoveInsert(chaoRotate(left, i), 1, 13);
+        right = chaoRemoveInsert(chaoRotate(right, i), 1, 13);
+      }
+      return out;
+    },
+    decrypt(ct, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of ct) {
+        const i = left.indexOf(ch);
+        out += right[i];
+        left = chaoRemoveInsert(chaoRotate(left, i), 1, 13);
+        right = chaoRemoveInsert(chaoRotate(right, i), 1, 13);
+      }
+      return out;
+    },
+  });
+
+  // --- Chaocipher: Adjustable Cut Point ------------------------------------
+  // Real Chaocipher's exact two-disk lookup and rotation rule (including
+  // Byrne's extra step for the right disk), but the splice's reinsertion
+  // point - always the nadir, position 13, i.e. diametrically opposite the
+  // zenith, in Byrne's design - is a chosen parameter instead of a fixed
+  // constant. Someone tinkering with "how far around the disk should the
+  // extracted letter travel" has no way to know 13 (the antipodal point,
+  // presumably chosen for how the physical geared disks mesh) is special,
+  // and could reasonably settle on any other position instead. Cut position
+  // 13 reduces this to literally the same cipher as Chaocipher (checked in
+  // scripts/test_ciphers.js), so this is a strict generalization of it.
+  // ---------------------------------------------------------------------
+  function chaoStepCut(left, right, i, cutPosition) {
+    const leftR = chaoRotate(left, i);
+    const rightR = chaoRotate(right, i + 1);
+    return [chaoRemoveInsert(leftR, 1, cutPosition), chaoRemoveInsert(rightR, 2, cutPosition)];
+  }
+  register({
+    id: 'chaocipher_adjustable_cut',
+    label: 'Chaocipher: Adjustable Cut Point',
+    fields: [
+      { name: 'leftAlphabet', label: 'Left disk alphabet (ciphertext), 26 letters', type: 'text', placeholder: 'e.g. XLEMFHIWOVNYRUDQCJPASGBTKZ' },
+      { name: 'rightAlphabet', label: 'Right disk alphabet (plaintext), 26 letters', type: 'text', placeholder: 'e.g. SGLBIZHJMFTRXAVKNQPDWYCUOE' },
+      { name: 'cutPosition', label: 'Splice reinsertion position (1-24; Byrne\'s original design always uses 13, the disk\'s antipodal point)', type: 'number', min: 1, max: 24 },
+    ],
+    randomKey() {
+      const leftAlphabet = shuffled(ALPHABET.split('')).join('');
+      const rightAlphabet = shuffled(ALPHABET.split('')).join('');
+      // Excludes 13 so a freshly-generated sample is never accidentally
+      // identical to plain Chaocipher; manual entry can still choose 13.
+      const choices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+      const cutPosition = randChoice(choices);
+      return { key: { leftAlphabet, rightAlphabet, cutPosition }, values: { leftAlphabet, rightAlphabet, cutPosition: String(cutPosition) } };
+    },
+    keyFromValues(values) {
+      const left = onlyLetters(values.leftAlphabet);
+      const right = onlyLetters(values.rightAlphabet);
+      if (left.length !== 26 || new Set(left).size !== 26) throw new Error('Left disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      if (right.length !== 26 || new Set(right).size !== 26) throw new Error('Right disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      const cutPosition = parseInt(values.cutPosition, 10);
+      if (!Number.isInteger(cutPosition) || cutPosition < 1 || cutPosition > 24) throw new Error('Splice reinsertion position must be an integer from 1 to 24.');
+      return { leftAlphabet: left, rightAlphabet: right, cutPosition };
+    },
+    keyInfo(key) { return `left=${key.leftAlphabet} right=${key.rightAlphabet} cut=${key.cutPosition}`; },
+    encrypt(pt, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of pt) {
+        const i = right.indexOf(ch);
+        out += left[i];
+        [left, right] = chaoStepCut(left, right, i, key.cutPosition);
+      }
+      return out;
+    },
+    decrypt(ct, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of ct) {
+        const i = left.indexOf(ch);
+        out += right[i];
+        [left, right] = chaoStepCut(left, right, i, key.cutPosition);
+      }
+      return out;
+    },
+  });
+
+  // --- Chaocipher: Double Splice --------------------------------------------
+  // Real Chaocipher's exact two-disk lookup and permutation rule, applied
+  // *twice* per letter instead of once - the same disk-rotation-and-splice
+  // step repeated back to back before moving on to the next plaintext
+  // letter. "Scramble it twice for extra security" is a very natural
+  // instinct for anyone designing a cipher by hand (this very tool's
+  // Double Columnar Transposition is the same idea applied to a completely
+  // different cipher family) - doubling up an already-working step is a
+  // much easier mistake/embellishment to make than reasoning about whether
+  // it actually buys anything.
+  // ---------------------------------------------------------------------
+  register({
+    id: 'chaocipher_double_splice',
+    label: 'Chaocipher: Double Splice',
+    fields: [
+      { name: 'leftAlphabet', label: 'Left disk alphabet (ciphertext), 26 letters', type: 'text', placeholder: 'e.g. XLEMFHIWOVNYRUDQCJPASGBTKZ' },
+      { name: 'rightAlphabet', label: 'Right disk alphabet (plaintext), 26 letters', type: 'text', placeholder: 'e.g. SGLBIZHJMFTRXAVKNQPDWYCUOE' },
+    ],
+    randomKey() {
+      const leftAlphabet = shuffled(ALPHABET.split('')).join('');
+      const rightAlphabet = shuffled(ALPHABET.split('')).join('');
+      return { key: { leftAlphabet, rightAlphabet }, values: { leftAlphabet, rightAlphabet } };
+    },
+    keyFromValues(values) {
+      const left = onlyLetters(values.leftAlphabet);
+      const right = onlyLetters(values.rightAlphabet);
+      if (left.length !== 26 || new Set(left).size !== 26) throw new Error('Left disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      if (right.length !== 26 || new Set(right).size !== 26) throw new Error('Right disk alphabet must contain exactly the 26 letters A-Z, each once.');
+      return { leftAlphabet: left, rightAlphabet: right };
+    },
+    keyInfo(key) { return `left=${key.leftAlphabet} right=${key.rightAlphabet}`; },
+    encrypt(pt, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of pt) {
+        const i = right.indexOf(ch);
+        out += left[i];
+        [left, right] = chaoStep(left, right, i);
+        [left, right] = chaoStep(left, right, i);
+      }
+      return out;
+    },
+    decrypt(ct, key) {
+      let left = key.leftAlphabet.split('');
+      let right = key.rightAlphabet.split('');
+      let out = '';
+      for (const ch of ct) {
+        const i = left.indexOf(ch);
+        out += right[i];
+        [left, right] = chaoStep(left, right, i);
+        [left, right] = chaoStep(left, right, i);
+      }
+      return out;
+    },
+  });
+
+  // ---------------------------------------------------------------------
   // Move-to-Front / Move-to-Back substitution. A single keyed 26-letter
   // alphabet acts as a dynamic substitution table: to encrypt plaintext
   // letter P, find P's current position in that alphabet (0-25) - that
@@ -2484,6 +2739,7 @@
     chaoRotate,
     chaoRemoveInsert,
     chaoStep,
+    chaoStepCut,
     moveToFront,
     moveToBack,
     dynSubInit,

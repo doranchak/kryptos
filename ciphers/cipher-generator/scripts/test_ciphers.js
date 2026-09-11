@@ -36,6 +36,25 @@ function assertTrue(cond, label) {
   if (!cond) { failures++; console.log(`FAIL: ${label}`); }
 }
 
+// A handful of checks below (generateBulkAsync across more than one cipher
+// type) genuinely span multiple event-loop turns - it deliberately
+// `setTimeout`s between cipher types so a real browser tab stays
+// responsive during a long bulk run. Everything else in this file runs
+// fully synchronously; these are queued here and drained (one at a time,
+// waiting for each `done()`) right before the final tally/exit at the
+// bottom of the file, instead of forcing the async parts to fit into the
+// synchronous flow above.
+const asyncTests = [];
+function asyncTest(fn) { asyncTests.push(fn); }
+function runAsyncTests(tests, cb) {
+  let i = 0;
+  function next() {
+    if (i >= tests.length) { cb(); return; }
+    tests[i++](next);
+  }
+  next();
+}
+
 // ---------------------------------------------------------------------
 // 1. Round-trip every cipher with a random key, several times, on random
 //    plaintext lengths.
@@ -257,6 +276,143 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   }
 }
 
+// --- generator.js: pickForCiphertextLength in length-*range* mode
+// (`{min, max}` instead of a plain number) - a number and the degenerate
+// range `{min: n, max: n}` must behave identically, and a real range must
+// land the ciphertext length somewhere inside [min, max] for every
+// registered cipher, including the ratio-2 (Homophonic/ADFGX/ADFGVX) and
+// variable-overhead (Playfair/Hill) ciphers that can't hit an arbitrary
+// exact length - the whole point of range mode. ---
+{
+  const G = global.CipherGenerator;
+  const CIPHERS_ALL = global.CipherLib.CIPHERS;
+
+  for (const id of Object.keys(CIPHERS_ALL)) {
+    const def = CIPHERS_ALL[id];
+    // A number and {min:60,max:60} must search identically.
+    const asNumber = G.pickForCiphertextLength(def, id, 60, 30);
+    const asDegenerateRange = G.pickForCiphertextLength(def, id, { min: 60, max: 60 }, 30);
+    assertEq(!!asNumber, !!asDegenerateRange, `${id}: a number target and the equivalent degenerate {min,max} range must both succeed or both fail`);
+    if (asNumber) assertEq(asNumber.ciphertext.length, asDegenerateRange.ciphertext.length, `${id}: a number target and the equivalent degenerate {min,max} range must find the same ciphertext length`);
+
+    // A real range: every cipher (including ratio-2 and variable-overhead
+    // ones) should be able to land somewhere in a reasonably wide window.
+    if (id === 'mirdek') continue; // Mirdek's fixed +25 overhead means this specific window is unreachable; covered separately below.
+    const found = G.pickForCiphertextLength(def, id, { min: 90, max: 100 }, 30);
+    assertTrue(!!found, `${id}: pickForCiphertextLength({min:90,max:100}) found a usable plaintext/key/ciphertext`);
+    if (!found) continue;
+    assertTrue(found.ciphertext.length >= 90 && found.ciphertext.length <= 100, `${id}: ciphertext length (${found.ciphertext.length}) must fall within the requested range [90,100]`);
+  }
+
+  // Mirdek: a range comfortably clear of the 25-letter IV floor works normally.
+  {
+    const found = G.pickForCiphertextLength(CIPHERS_ALL.mirdek, 'mirdek', { min: 90, max: 100 }, 30);
+    assertTrue(!!found, 'mirdek: pickForCiphertextLength({min:90,max:100}) found a usable plaintext/key/ciphertext');
+    if (found) assertTrue(found.ciphertext.length >= 90 && found.ciphertext.length <= 100, `mirdek: ciphertext length (${found.ciphertext.length}) must fall within the requested range [90,100]`);
+  }
+
+  // A range entirely below Mirdek's 25-letter IV floor can never be hit -
+  // correctly returns null rather than an out-of-range result.
+  {
+    const found = G.pickForCiphertextLength(CIPHERS_ALL.mirdek, 'mirdek', { min: 5, max: 10 }, 30);
+    assertTrue(!found, 'mirdek: a range entirely below the 25-letter IV floor is correctly unreachable');
+  }
+
+  // Repeated calls in range mode must land on *varied* lengths spread
+  // across the range - not the same one every time (e.g. always the
+  // range's midpoint) - since each call seeds its search from a fresh
+  // random point in the range. A wide-enough range and a decent sample
+  // size make it astronomically unlikely every draw lands identically by
+  // chance alone for an exact-ratio cipher like Vigenere.
+  {
+    const lengths = new Set();
+    for (let i = 0; i < 20; i++) {
+      const found = G.pickForCiphertextLength(CIPHERS_ALL.vigenere, 'vigenere', { min: 50, max: 150 }, 30);
+      if (found) lengths.add(found.ciphertext.length);
+    }
+    assertTrue(lengths.size > 1, `pickForCiphertextLength(range) should land on varied lengths across repeated calls, not always the same one (got: ${[...lengths].join(',')})`);
+  }
+}
+
+// --- generator.js: generateCiphersAsync accepts a lengthSpec range and
+// keeps every produced ciphertext inside it; generateBulkAsync runs every
+// requested cipher type in turn, calling onCipherDone once per type (with
+// that type's own results) and onAllDone exactly once at the end with all
+// of them combined. ---
+{
+  const G = global.CipherGenerator;
+
+  // generateCiphersAsync, range mode, single cipher type.
+  {
+    let doneResults = null, doneSkipped = null;
+    G.generateCiphersAsync({
+      cipherId: 'vigenere',
+      lengthSpec: { min: 30, max: 40 },
+      quantity: 5,
+      isCancelled: () => false,
+      onProgress: () => {},
+      onDone: (results, skipped) => { doneResults = results; doneSkipped = skipped; },
+      onError: (e) => { throw e; },
+    });
+    assertEq(doneResults && doneResults.length, 5, 'generateCiphersAsync (range mode) produced the requested quantity');
+    assertTrue(doneSkipped === 0, 'generateCiphersAsync (range mode) skipped none for an easy cipher/range');
+    (doneResults || []).forEach((r) => {
+      assertTrue(r.ciphertext.length >= 30 && r.ciphertext.length <= 40, `generateCiphersAsync (range mode): ciphertext length (${r.ciphertext.length}) must fall within [30,40]`);
+    });
+  }
+
+  // generateBulkAsync across a handful of cipher types. This genuinely
+  // spans multiple event-loop turns (it setTimeouts between cipher types),
+  // so it's queued as an async test and drained near the bottom of this
+  // file rather than asserted on immediately.
+  asyncTest((done) => {
+    const cipherIds = ['vigenere', 'beaufort', 'columnar_transposition'];
+    const startedIds = [];
+    const doneIds = [];
+    G.generateBulkAsync({
+      cipherIds,
+      lengthSpec: 24,
+      quantity: 3,
+      isCancelled: () => false,
+      onCipherStart: (cipherId) => startedIds.push(cipherId),
+      onCipherDone: (cipherId, results, skipped) => {
+        doneIds.push(cipherId);
+        assertEq(results.length, 3, `generateBulkAsync: ${cipherId} produced the requested quantity`);
+        results.forEach((r) => assertEq(r.ciphertext.length, 24, `generateBulkAsync: ${cipherId} ciphertext length must hit the exact target (24)`));
+      },
+      onAllDone: (allDoneByType, allDoneCancelled) => {
+        assertEq(startedIds.join(','), cipherIds.join(','), 'generateBulkAsync: onCipherStart fires for every cipher type, in order');
+        assertEq(doneIds.join(','), cipherIds.join(','), 'generateBulkAsync: onCipherDone fires for every cipher type, in order');
+        assertTrue(!allDoneCancelled, 'generateBulkAsync: onAllDone reports not cancelled');
+        assertEq(allDoneByType && allDoneByType.length, cipherIds.length, 'generateBulkAsync: onAllDone receives every cipher type\'s results');
+        assertEq((allDoneByType || []).reduce((n, t) => n + t.results.length, 0), cipherIds.length * 3, 'generateBulkAsync: onAllDone\'s combined result count matches quantity * cipher types');
+        done();
+      },
+      onError: (e) => { throw e; },
+    });
+  });
+
+  // generateBulkAsync respects isCancelled between cipher types.
+  asyncTest((done) => {
+    const cipherIds = ['vigenere', 'beaufort', 'columnar_transposition', 'porta'];
+    const cancelAfter = 2; // cancel once this many types have completed
+    const doneIds = [];
+    G.generateBulkAsync({
+      cipherIds,
+      lengthSpec: 24,
+      quantity: 2,
+      isCancelled: () => doneIds.length >= cancelAfter,
+      onCipherDone: (cipherId) => doneIds.push(cipherId),
+      onAllDone: (byType, wasCancelled) => {
+        assertTrue(wasCancelled, 'generateBulkAsync: onAllDone reports cancelled when isCancelled becomes true mid-run');
+        assertTrue(doneIds.length < cipherIds.length, 'generateBulkAsync: stops before every cipher type runs once cancelled');
+        done();
+      },
+      onError: (e) => { throw e; },
+    });
+  });
+}
+
 // --- Running Key I-IV cross-checked against the already-verified Quagmire
 // I-IV vectors above: for a plaintext no longer than the indicator word,
 // `indicator[i % indicator.length] === indicator[i]` for every position, so
@@ -381,6 +537,103 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
   assertEq(ct, expectedCt, 'Chaocipher (dcode.gr reference vector)');
   assertEq(CIPHERS.chaocipher.decrypt(ct, key), pt, 'Chaocipher decrypt round-trip');
   assertEq(CIPHERS.chaocipher.decrypt(expectedCt, key), pt, 'Chaocipher decrypts the dcode.gr ciphertext directly');
+}
+
+// --- Chaocipher variants. There's no external reference for these (they're
+// original variations, not historical ciphers), so correctness is
+// established by deriving each one's expected behavior from the
+// already-verified real Chaocipher above rather than an arbitrary locked-in
+// vector: three of the four variants keep Chaocipher's exact lookup rule
+// (find the letter, read the corresponding letter off the other disk) and
+// only change how the disks get permuted *afterward* - so their very first
+// output letter, computed before either disk has been touched, must equal
+// real Chaocipher's first output letter on the same two starting disks
+// (all cross-checked against the shared 'BETWEENSUBTLE...' plaintext and
+// disks used in the reference vector above); only later letters can diverge
+// once each variant's own permutation rule has taken effect. ---
+{
+  const LEFT = 'XLEMFHIWOVNYRUDQCJPASGBTKZ';
+  const RIGHT = 'SGLBIZHJMFTRXAVKNQPDWYCUOE';
+  const PT = 'BETWEENSUBTLESHADINGANDTHEABSENCEOFLIGHTLIESTHENUANCEOFIQLUSION';
+  const REAL_CT = 'MKOJGSYVCIXMDEIWFBRVDBYUVFLXRZUSGIHQEESLBMZJHKAIZHXPIYFVTCVBFME';
+  const key = { leftAlphabet: LEFT, rightAlphabet: RIGHT };
+
+  // Chaocipher: Symmetric Wheels - same first letter as real Chaocipher
+  // (neither disk has been permuted yet), diverging from letter 2 onward
+  // since the two disks are now permuted identically instead of Byrne's
+  // asymmetric rule. Vector locked in from this implementation.
+  {
+    const ct = CIPHERS.chaocipher_symmetric.encrypt(PT, key);
+    assertEq(ct[0], REAL_CT[0], 'Chaocipher: Symmetric Wheels matches real Chaocipher on the (pre-permutation) first letter');
+    assertTrue(ct !== REAL_CT, 'Chaocipher: Symmetric Wheels diverges from real Chaocipher once permutation starts');
+    assertEq(ct, 'MZNSZZCXTMNEZXIUAFCLUCANIZUMXZCBZKVEFLINEFZXNIZCTUCBZKVFJETXFKC', 'Chaocipher: Symmetric Wheels vector');
+    assertEq(CIPHERS.chaocipher_symmetric.decrypt(ct, key), PT, 'Chaocipher: Symmetric Wheels decrypt round-trip');
+  }
+
+  // Chaocipher: Adjustable Cut Point - cutPosition 13 (the nadir) is
+  // mathematically identical to real Chaocipher's own fixed splice point,
+  // so it must reproduce the *entire* reference ciphertext exactly, not
+  // just the first letter. A different cut position still matches on the
+  // untouched first letter, then diverges.
+  {
+    const key13 = CIPHERS.chaocipher_adjustable_cut.keyFromValues({ leftAlphabet: LEFT, rightAlphabet: RIGHT, cutPosition: '13' });
+    const ct13 = CIPHERS.chaocipher_adjustable_cut.encrypt(PT, key13);
+    assertEq(ct13, REAL_CT, 'Chaocipher: Adjustable Cut Point with cutPosition=13 is mathematically identical to real Chaocipher');
+    assertEq(CIPHERS.chaocipher_adjustable_cut.decrypt(ct13, key13), PT, 'Chaocipher: Adjustable Cut Point (cut=13) decrypt round-trip');
+
+    const key7 = CIPHERS.chaocipher_adjustable_cut.keyFromValues({ leftAlphabet: LEFT, rightAlphabet: RIGHT, cutPosition: '7' });
+    const ct7 = CIPHERS.chaocipher_adjustable_cut.encrypt(PT, key7);
+    assertEq(ct7[0], REAL_CT[0], 'Chaocipher: Adjustable Cut Point (cut=7) matches real Chaocipher on the first letter');
+    assertTrue(ct7 !== REAL_CT, 'Chaocipher: Adjustable Cut Point (cut=7) diverges from real Chaocipher once permutation starts');
+    assertEq(ct7, 'MKOJGSFALPSPDDXXEYPNEVPFTOKSBEZTVVEQEGZLUTTSHVYUQMCAZXCSKDMQBFX', 'Chaocipher: Adjustable Cut Point (cut=7) vector');
+    assertEq(CIPHERS.chaocipher_adjustable_cut.decrypt(ct7, key7), PT, 'Chaocipher: Adjustable Cut Point (cut=7) decrypt round-trip');
+
+    let threw = false;
+    try { CIPHERS.chaocipher_adjustable_cut.keyFromValues({ leftAlphabet: LEFT, rightAlphabet: RIGHT, cutPosition: '25' }); }
+    catch (e) { threw = true; }
+    assertTrue(threw, 'Chaocipher: Adjustable Cut Point rejects an out-of-range cut position (25)');
+  }
+
+  // Chaocipher: Double Splice - independently re-derived (not just calling
+  // its own encrypt() twice) by driving the already-verified chaoStep
+  // primitive by hand, twice per letter.
+  {
+    const CL = global.CipherLib;
+    let left = LEFT.split(''), right = RIGHT.split('');
+    let manualCt = '';
+    for (const ch of PT.slice(0, 6)) {
+      const i = right.indexOf(ch);
+      manualCt += left[i];
+      [left, right] = CL.chaoStep(left, right, i);
+      [left, right] = CL.chaoStep(left, right, i);
+    }
+    const ct = CIPHERS.chaocipher_double_splice.encrypt(PT.slice(0, 6), key);
+    assertEq(ct, manualCt, 'Chaocipher: Double Splice matches independently hand-driven double chaoStep application');
+    assertEq(ct[0], REAL_CT[0], 'Chaocipher: Double Splice matches real Chaocipher on the (pre-permutation) first letter');
+
+    const fullCt = CIPHERS.chaocipher_double_splice.encrypt(PT, key);
+    assertEq(fullCt, 'MTIQAJPDOZPPIREHQRJHAEGYZWBVULGKPVAINQUWQPVQBNSBTQMZKLKICTXAHIQ', 'Chaocipher: Double Splice vector (full plaintext)');
+    assertEq(CIPHERS.chaocipher_double_splice.decrypt(fullCt, key), PT, 'Chaocipher: Double Splice decrypt round-trip');
+  }
+
+  // Chaocipher: Single Wheel - structurally different (one shared alphabet,
+  // offset-13 lookup instead of two independent disks), so it can't be
+  // cross-checked against real Chaocipher's first letter the way the other
+  // three can. Instead, hand-verify the very first letter directly from the
+  // unpermuted starting wheel: 'A' sits at index 19 in LEFT (used here as
+  // the wheel), so its ciphertext partner is the letter 13 positions (half
+  // the 26-letter wheel) away, at index (19+13) mod 26 = 6, which is 'I'.
+  {
+    const singleKey = { wheelAlphabet: LEFT };
+    assertEq(LEFT.indexOf('A'), 19, 'Chaocipher: Single Wheel - sanity-check letter A\'s starting index in the wheel used below');
+    assertEq(LEFT[6], 'I', 'Chaocipher: Single Wheel - sanity-check the letter opposite A (index 19+13 mod 26 = 6)');
+    assertEq(CIPHERS.chaocipher_single_wheel.encrypt('A', singleKey), 'I', 'Chaocipher: Single Wheel hand-verified first letter (A -> I, opposite side of the wheel)');
+    assertEq(CIPHERS.chaocipher_single_wheel.decrypt('I', singleKey), 'A', 'Chaocipher: Single Wheel decrypts a single letter back (opposite is its own inverse: 13+13=26)');
+
+    const ct = CIPHERS.chaocipher_single_wheel.encrypt(PT, singleKey);
+    assertEq(ct, 'VCVNQDIJXIIKPQBPAOOIDTANMLDGPRQNVFHUKOOHAKXAITXYZPJUXKQVYWDRLBG', 'Chaocipher: Single Wheel vector (full plaintext)');
+    assertEq(CIPHERS.chaocipher_single_wheel.decrypt(ct, singleKey), PT, 'Chaocipher: Single Wheel decrypt round-trip');
+  }
 }
 
 // --- Move-to-Front / Move-to-Back, hand-worked vectors (keyword "ABC" ->
@@ -590,5 +843,7 @@ console.log(`\nRound-trip + keyFromValues checks done. ${checks} checks, ${failu
 
 // --- ADFGX / ADFGVX / Bifid / Trifid / Myszkowski / Porta / Autokey / Running key / Scytale / Double columnar / Homophonic / Simple substitution round-trip already covered above generically ---
 
-console.log(`\n=== TOTAL: ${checks} checks, ${failures} failures ===`);
-process.exit(failures ? 1 : 0);
+runAsyncTests(asyncTests, () => {
+  console.log(`\n=== TOTAL: ${checks} checks, ${failures} failures ===`);
+  process.exit(failures ? 1 : 0);
+});

@@ -21,6 +21,7 @@
     <div class="mode-tabs" role="tablist">
       <button class="tab-btn active" data-mode="manual" type="button">Encrypt / Decrypt</button>
       <button class="tab-btn" data-mode="generate" type="button">Generate Ciphers</button>
+      <button class="tab-btn" data-mode="bulk" type="button">Bulk Generate</button>
       <button class="tab-btn" data-mode="visualize" type="button">Visualizer</button>
     </div>
   </div>
@@ -59,10 +60,22 @@
 
   <!-- ==================== Generation mode ==================== -->
   <section id="generatePanel" class="panel" hidden>
+    <div class="direction-toggle">
+      <label><input type="radio" name="lengthMode" value="fixed" checked> Fixed length</label>
+      <label><input type="radio" name="lengthMode" value="range"> Length range</label>
+    </div>
     <div class="gen-controls">
-      <label class="field">
+      <label class="field" id="targetLengthField">
         <span>Target ciphertext length</span>
         <input type="number" id="targetLength" value="97" min="1" max="5000">
+      </label>
+      <label class="field" id="minLengthField" hidden>
+        <span>Min ciphertext length</span>
+        <input type="number" id="minLength" value="90" min="1" max="5000">
+      </label>
+      <label class="field" id="maxLengthField" hidden>
+        <span>Max ciphertext length</span>
+        <input type="number" id="maxLength" value="105" min="1" max="5000">
       </label>
       <label class="field">
         <span>Quantity</span>
@@ -72,13 +85,15 @@
       <button id="cancelBtn" type="button" class="btn-secondary" hidden>Cancel</button>
       <button id="exportCsvBtn" type="button" class="btn-secondary" disabled>Export CSV</button>
     </div>
-    <p class="hint">The target length is the desired final <em>ciphertext</em> length; the generator works backward to
+    <p class="hint">In fixed-length mode, the target length is the desired final <em>ciphertext</em> length; the generator works backward to
       figure out how much plaintext to select so the ciphertext comes out at that length, so ciphers that
       fractionate or expand text (Homophonic, ADFGX, ADFGVX roughly halve the plaintext needed) or add fixed
       overhead (Mirdek's 25-letter IV) get proportionally less plaintext, not a longer ciphertext. The ciphertext
       length never exceeds the target; a handful of ciphers can't always hit it exactly (Homophonic/ADFGX/ADFGVX
       only land on even targets exactly; Playfair's double-letter fillers and Hill's block padding depend on the
-      actual letters chosen) and may come in a little under instead.</p>
+      actual letters chosen) and may come in a little under instead. In length-range mode, the generator accepts
+      any ciphertext length within min-max (inclusive) instead of hunting for one exact value - useful for ciphers
+      that can't land on an arbitrary exact length.</p>
 
     <div id="genProgress" class="progress" hidden>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -95,7 +110,7 @@
             <th>Key information</th>
             <th>Ciphertext</th>
             <th>Plaintext</th>
-            <th class="col-len">CT Len</th>
+            <th class="col-len">Len</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
@@ -117,6 +132,61 @@
           <option value="100">100</option>
         </select>
       </label>
+    </div>
+  </section>
+
+  <!-- ==================== Bulk generation (every cipher type at once) ==================== -->
+  <section id="bulkPanel" class="panel" hidden>
+    <p class="hint">Generates the given quantity for <strong>every</strong> registered cipher type
+      (currently <span id="bulkCipherCount"></span>), each targeting the length(s) below, then automatically
+      downloads one CSV per cipher type as it finishes (your browser may ask you to allow multiple downloads
+      the first time). A combined CSV of every cipher type together becomes available once the whole run
+      completes, if you'd rather have one file.</p>
+
+    <div class="direction-toggle">
+      <label><input type="radio" name="bulkLengthMode" value="fixed" checked> Fixed length</label>
+      <label><input type="radio" name="bulkLengthMode" value="range"> Length range</label>
+    </div>
+    <div class="gen-controls">
+      <label class="field" id="bulkTargetLengthField">
+        <span>Target ciphertext length</span>
+        <input type="number" id="bulkTargetLength" value="97" min="1" max="5000">
+      </label>
+      <label class="field" id="bulkMinLengthField" hidden>
+        <span>Min ciphertext length</span>
+        <input type="number" id="bulkMinLength" value="90" min="1" max="5000">
+      </label>
+      <label class="field" id="bulkMaxLengthField" hidden>
+        <span>Max ciphertext length</span>
+        <input type="number" id="bulkMaxLength" value="105" min="1" max="5000">
+      </label>
+      <label class="field">
+        <span>Quantity (per cipher type)</span>
+        <input type="number" id="bulkQuantity" value="10" min="1" max="50000">
+      </label>
+      <button id="bulkGenerateBtn" type="button" class="btn-primary">Generate All</button>
+      <button id="bulkCancelBtn" type="button" class="btn-secondary" hidden>Cancel</button>
+      <button id="bulkDownloadAllBtn" type="button" class="btn-secondary" disabled>Download combined CSV</button>
+    </div>
+
+    <div id="bulkProgress" class="progress" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="bulkProgressFill"></div></div>
+      <span class="progress-text" id="bulkProgressText"></span>
+    </div>
+    <div id="bulkSummary" class="gen-summary"></div>
+
+    <div class="results-table-wrap">
+      <table id="bulkResultsTable">
+        <thead>
+          <tr>
+            <th>Cipher</th>
+            <th class="col-len">Generated</th>
+            <th class="col-len">Skipped</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="bulkResultsBody"></tbody>
+      </table>
     </div>
   </section>
 

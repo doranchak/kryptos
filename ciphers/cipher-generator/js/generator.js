@@ -127,23 +127,38 @@
     return Math.max(1, Math.round((targetCiphertextLength - offset) / ratio));
   }
 
+  // Accepts either a plain number (an exact target - min and max both equal
+  // to it) or a `{min, max}` object (a length range, inclusive on both
+  // ends), and always returns the latter shape, so the search below only
+  // has to know about ranges. An exact target is just the degenerate
+  // range [target, target].
+  function normalizeLengthSpec(lengthSpec) {
+    if (typeof lengthSpec === 'number') return { min: lengthSpec, max: lengthSpec };
+    return { min: lengthSpec.min, max: lengthSpec.max };
+  }
+
   // ---------------------------------------------------------------------
-  // Pick a (plaintext, key, ciphertext) triple whose ciphertext length is
-  // exactly `targetCiphertextLength` when achievable, and never longer.
-  // Starting from the LENGTH_MODEL estimate above, repeatedly pick a
-  // whole-word plaintext of the current guessed length, encrypt it for
-  // real, and correct the guess from the measured ciphertext length -
-  // exact-ratio ciphers (most of them) converge on the first try;
-  // content-dependent ones (Playfair's double-letter fillers, Hill's
-  // block-size padding) take a few more. The longest ciphertext seen that
-  // does not exceed the target is kept as a fallback in case the target
-  // can never be hit exactly (e.g. an odd target for a ratio-2 cipher like
-  // Homophonic/ADFGX/ADFGVX, or a target shorter than Mirdek's fixed
-  // 25-letter IV overhead).
+  // Pick a (plaintext, key, ciphertext) triple whose ciphertext length
+  // falls within `lengthSpec` (an exact target, or a `{min, max}` range,
+  // inclusive) when achievable, and never exceeds the range's max.
+  // Starting from the LENGTH_MODEL estimate for a *random* point in the
+  // range (a fresh pick on every call, so repeated calls - e.g. generating
+  // a batch - land on varied lengths spread across the range instead of
+  // all clustering around one fixed point such as its middle), repeatedly
+  // pick a whole-word plaintext of the current guessed length, encrypt it
+  // for real, and correct the guess from the measured ciphertext length -
+  // exact-ratio ciphers (most of them) converge on the first try, right on
+  // that random point; content-dependent ones (Playfair's double-letter
+  // fillers, Hill's block-size padding) take a few more and may land
+  // elsewhere in the range. The longest in-range-or-under ciphertext seen
+  // is kept as a fallback in case the range can never be hit at all (e.g.
+  // an odd target for a ratio-2 cipher like Homophonic/ADFGX/ADFGVX, or a
+  // range entirely below Mirdek's fixed 25-letter IV overhead).
   // ---------------------------------------------------------------------
-  function pickForCiphertextLength(def, cipherId, targetCiphertextLength, maxAttempts) {
+  function pickForCiphertextLength(def, cipherId, lengthSpec, maxAttempts) {
     maxAttempts = maxAttempts || 20;
-    let guessLen = estimatePlaintextLength(cipherId, targetCiphertextLength);
+    const { min, max } = normalizeLengthSpec(lengthSpec);
+    let guessLen = estimatePlaintextLength(cipherId, randInt(min, max));
     const triedLengths = new Set();
     let best = null;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -166,24 +181,30 @@
       }
 
       const candidate = { seq, ptNoSpaces, key, values, ciphertext };
-      if (ciphertext.length === targetCiphertextLength) return candidate;
-      if (ciphertext.length < targetCiphertextLength) {
-        if (!best || ciphertext.length > best.ciphertext.length) best = candidate;
-        guessLen += Math.max(1, targetCiphertextLength - ciphertext.length);
+      const len = ciphertext.length;
+      if (len >= min && len <= max) return candidate;
+      if (len <= max) {
+        // Under the range (or under the exact target) - keep as a
+        // fallback, and push the guess up toward the range.
+        if (!best || len > best.ciphertext.length) best = candidate;
+        guessLen += Math.max(1, min - len);
       } else {
-        guessLen -= Math.max(1, ciphertext.length - targetCiphertextLength);
+        // Over the range (or over the exact target) - pull the guess back down.
+        guessLen -= Math.max(1, len - max);
       }
     }
     return best;
   }
 
   // ---------------------------------------------------------------------
-  // Bulk generation. Runs in synchronous chunks with a callback between
-  // chunks (via setTimeout) so the browser tab stays responsive and a
-  // progress bar / cancel button can be honored for large quantities.
+  // Batch generation for a single cipher type. Runs in synchronous chunks
+  // with a callback between chunks (via setTimeout) so the browser tab
+  // stays responsive and a progress bar / cancel button can be honored for
+  // large quantities. `lengthSpec` is either an exact ciphertext-length
+  // number or a `{min, max}` range (see pickForCiphertextLength above).
   // ---------------------------------------------------------------------
   function generateCiphersAsync(opts) {
-    const { cipherId, targetLength, quantity, onProgress, onDone, onError, isCancelled } = opts;
+    const { cipherId, lengthSpec, quantity, onProgress, onDone, onError, isCancelled } = opts;
     const def = global.CipherLib.CIPHERS[cipherId];
     if (!def) { onError(new Error(`Unknown cipher: ${cipherId}`)); return; }
 
@@ -196,7 +217,7 @@
       if (isCancelled && isCancelled()) { onDone(results, skipped, true); return; }
       const end = Math.min(quantity, i + CHUNK);
       for (; i < end; i++) {
-        const found = pickForCiphertextLength(def, cipherId, targetLength);
+        const found = pickForCiphertextLength(def, cipherId, lengthSpec);
         if (!found) { skipped++; continue; }
         const { seq, ptNoSpaces, key, ciphertext } = found;
         results.push({
@@ -217,6 +238,55 @@
       }
     }
     step();
+  }
+
+  // ---------------------------------------------------------------------
+  // Bulk generation: the same batch generation above, run in turn for
+  // every cipher type in `cipherIds`, each targeting the same
+  // `lengthSpec`/`quantity`. Cipher types are generated strictly one at a
+  // time (not in parallel) so that:
+  //   - progress/cancellation stay meaningful (one "step" for the caller's
+  //     UI is "one cipher type finished", on top of that type's own
+  //     internal chunked progress via onCipherProgress), and
+  //   - the caller can act on each cipher type's results as soon as
+  //     they're ready (e.g. trigger that type's CSV download) without
+  //     waiting for every other type to finish first.
+  // `onAllDone` receives every type's `{ cipherId, results, skipped }` so
+  // the caller can also build one combined CSV across all types.
+  // ---------------------------------------------------------------------
+  function generateBulkAsync(opts) {
+    const { cipherIds, lengthSpec, quantity, isCancelled, onCipherStart, onCipherProgress, onCipherDone, onAllDone, onError } = opts;
+    const byType = [];
+    let i = 0;
+
+    function next() {
+      if (isCancelled && isCancelled()) { onAllDone(byType, true); return; }
+      if (i >= cipherIds.length) { onAllDone(byType, false); return; }
+      const cipherId = cipherIds[i];
+      if (!global.CipherLib.CIPHERS[cipherId]) { i++; next(); return; }
+      const index = i;
+      if (onCipherStart) onCipherStart(cipherId, index, cipherIds.length);
+      generateCiphersAsync({
+        cipherId,
+        lengthSpec,
+        quantity,
+        isCancelled,
+        onProgress: (done, total, produced) => { if (onCipherProgress) onCipherProgress(cipherId, done, total, produced, index, cipherIds.length); },
+        onDone: (results, skipped, wasCancelled) => {
+          byType.push({ cipherId, results, skipped });
+          if (onCipherDone) onCipherDone(cipherId, results, skipped, wasCancelled, index, cipherIds.length);
+          i++;
+          if (wasCancelled) { onAllDone(byType, true); return; }
+          setTimeout(next, 0);
+        },
+        onError: (e) => {
+          if (onError) onError(e, cipherId);
+          i++;
+          setTimeout(next, 0);
+        },
+      });
+    }
+    next();
   }
 
   function resultsToCsv(results) {
@@ -240,6 +310,7 @@
     estimatePlaintextLength,
     pickForCiphertextLength,
     generateCiphersAsync,
+    generateBulkAsync,
     resultsToCsv,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

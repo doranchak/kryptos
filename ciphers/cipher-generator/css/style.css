@@ -63,6 +63,11 @@ body {
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-muted); }
 .field.inline { flex-direction: row; align-items: center; gap: 8px; }
 .field span { font-weight: 600; }
+/* .field's explicit `display: flex` above otherwise wins over the browser's
+   default `[hidden] { display: none }` rule (equal specificity, but author
+   style beats user-agent style) - so toggling `.hidden` on a `.field` via JS
+   (e.g. the fixed-length/length-range toggle) would do nothing without this. */
+.field[hidden] { display: none; }
 
 select, input[type="text"], input[type="number"], textarea {
   font-family: inherit;
